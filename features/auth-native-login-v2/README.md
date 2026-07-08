@@ -7,6 +7,17 @@
 | 對應地基 | `docs/features/auth-foundation/architecture-decisions.md` §0.6 |
 | 相關 repo | `Ystravel-AuthService`、`Ystravel-AuthPortal`、`Ystravel-LocalDocker` |
 
+## 流程文件
+
+| 階段 | 文件 |
+|---|---|
+| PRD | [prd.md](./prd.md) |
+| Example Mapping | [example-mapping.md](./example-mapping.md) |
+| SA | [sa.md](./sa.md) |
+| SD（含安全債必修優先序） | [sd.md](./sd.md) |
+| BDD | `Ystravel-AuthService/src/auth/login-access.feature` |
+
+
 ## 1. 決策摘要
 
 Steven 實際看完 Logto 流程與實裝後，決定改回原本方向：**AuthService 主導登入、token、refresh、權限與 audit；AuthPortal 使用原本登入頁體驗。**
