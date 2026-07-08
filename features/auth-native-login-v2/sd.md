@@ -109,12 +109,12 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 ## 9. 測試策略 + 已知 gap
 
 依 07-testing-strategy.md：
-- **BDD（jest-cucumber）**：`src/auth/login-access.feature`（native 版，已存在）— 登入成功、不存在/密碼錯拒絕、停用拒絕、停用角色權限不計入。⚠️ AuthService 尚未實際裝 jest-cucumber 並接上 feature，**待補**。
+- **BDD（jest-cucumber）✅ 已接線（2026-07-09）**：`src/auth/login-access.feature` + `login-access.steps.ts` — 4 場景（登入成功含 RS256 token 簽發、不存在/密碼錯拒絕含統一訊息與 LOGIN_DENIED、停用拒絕、停用角色權限不計入）。steps 走**真的 `AuthController.login()`**（bcrypt 驗密、RS256 簽 token、buildAuthUser、audit），只 mock Prisma。feature 檔改為英文 Gherkin 關鍵字＋中文內文（對齊 CRM-Backend 前例，jest-cucumber 對 `# language:` 支援不可靠）；jest `testRegex` 改收 `(spec|steps)`。
 - **Unit/整合（已綠）**：`jwt-rs256.spec.ts` — 2 suites / 6 tests：RS256 接受、HS256 拒絕、JWKS metadata、kid 必填、private/public key mismatch fail-fast。
 - **Live smoke（已過）**：手簽 RS256 token 打 `/auth/me` 回 200；legacy HS256 回 401；JWKS 回 `kty=RSA/alg=RS256/kid=local-dev-key-1`。
 
-### ⚠️ Gap：登入失敗未寫 audit
-`login()` 失敗路徑直接 throw `UnauthorizedException`，**未寫 audit**；但 `login-access.feature` 場景「不存在或密碼錯誤的帳號被拒絕」要求「系統記錄一筆登入失敗紀錄」。→ 需在失敗路徑補 audit（action 建議 `LOGIN_DENIED`／`LOGIN_FAILED`），否則 BDD 綠不了。列入本階段收尾。
+### ✅ Gap 已修：登入失敗寫 audit（2026-07-09）
+原本 `login()` 失敗路徑直接 throw `UnauthorizedException`、未寫 audit；`login-access.feature` 要求登入失敗要留痕。**已補**：三種失敗路徑（`USER_NOT_FOUND`／`USER_DISABLED`／`BAD_PASSWORD`，`NO_PASSWORD` 併入）統一寫 `action=LOGIN_DENIED`，reason 放 `diff.reason`，並記 `attemptedUsername`（**絕不記密碼**）；帳號不存在時 `actorUserId=null`。新增 `login-audit.spec.ts`（4 tests）鎖定此行為，含「密碼不得出現在 audit」的斷言。jest 全綠（3 suites / 10 tests）、lint 綠。
 
 ## 10. 後續必修：安全債優先序（不可默默視為完成）
 
@@ -124,8 +124,8 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 |---|---|---|---|---|
 | ✅ 已完成 | Token 簽章 | HS256 共用密鑰，任一系統漏 secret 可偽造全站 token | RS256/JWKS，下游只拿 public key | 第二刀已完成、已驗證 |
 | ✅ 已完成 | Config validation | 缺 JWT 設定時登入才 500 | 啟動 fail fast + probe 驗 key pair | 第一刀已完成 |
-| **P0（收尾）** | 登入失敗 audit | 失敗路徑未留痕，BDD 場景要求要留 | login 失敗補 LOGIN_DENIED audit | 待做（§9） |
-| **P0（收尾）** | BDD 接線 | AuthService 未裝 jest-cucumber | 導入 jest-cucumber 接 login-access.feature | 待做 |
+| ✅ 已完成 | 登入失敗 audit | 失敗路徑未留痕，BDD 場景要求要留 | login 失敗補 LOGIN_DENIED audit + login-audit.spec.ts | 2026-07-09 完成（§9） |
+| ✅ 已完成 | BDD 接線 | AuthService 未裝 jest-cucumber | jest-cucumber@4.5.0 + login-access.steps.ts（4 場景全綠） | 2026-07-09 完成（§9） |
 | **P1** | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector + verifier hash、可索引、reuse detection | 待做 |
 | **P2** | 登入防暴力 | 無失敗計數/鎖定/告警 | 依帳號/IP 失敗計數、暫時鎖定（連錯 5 次鎖 15 分，對齊密碼政策）、audit+alert | 待做 |
 | **P3** | 密碼政策落地 | 政策文件已定、程式未完整 | 12 碼、弱/外洩密碼檢查、重設流程 | 待做 |
