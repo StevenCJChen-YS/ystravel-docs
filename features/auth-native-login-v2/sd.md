@@ -94,7 +94,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 ## 7. 效能與非功能需求
 
 - access token 驗證無狀態（public key 可快取），低成本。
-- ⚠️ **已知效能債**：`findActiveRefreshToken` 撈所有 active refresh token 逐筆 bcrypt compare，資料量一大即線性變慢。列為 §10 P1 必修。
+- ✅ **效能債已修（2026-07-09，§10 P1）**：改用 selector 唯一索引查找（`WHERE selector = ?`）+ verifier SHA-256 固定時間比對，取代全表逐筆 bcrypt；並加入 reuse detection（已撤銷 token 被重放時連坐撤銷整組）。
 
 ## 8. 錯誤碼
 
@@ -126,7 +126,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | Config validation | 缺 JWT 設定時登入才 500 | 啟動 fail fast + probe 驗 key pair | 第一刀已完成 |
 | ✅ 已完成 | 登入失敗 audit | 失敗路徑未留痕，BDD 場景要求要留 | login 失敗補 LOGIN_DENIED audit + login-audit.spec.ts | 2026-07-09 完成（§9） |
 | ✅ 已完成 | BDD 接線 | AuthService 未裝 jest-cucumber | jest-cucumber@4.5.0 + login-access.steps.ts（4 場景全綠） | 2026-07-09 完成（§9） |
-| **P1** | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector + verifier hash、可索引、reuse detection | 待做 |
+| ✅ 已完成 | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector（明文唯一索引）+ verifier（SHA-256 固定時間比對）+ reuse detection（連坐撤銷整組 token + TOKEN_REUSE_DETECTED audit） | 2026-07-09 完成；本機 DB migrate 實套 + e2e smoke 12/12、jest 21 綠 |
 | **P2** | 登入防暴力 | 無失敗計數/鎖定/告警 | 依帳號/IP 失敗計數、暫時鎖定（連錯 5 次鎖 15 分，對齊密碼政策）、audit+alert | 待做 |
 | **P3** | 密碼政策落地 | 政策文件已定、程式未完整 | 12 碼、弱/外洩密碼檢查、重設流程 | 待做 |
 | **P4** | Google 登入 | 前端有按鈕、後端無端點 | 對接 Google OAuth；預先佈建+公司網域+external subject linking（用 `logtoSub` 欄位） | 待做 |
