@@ -128,7 +128,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | BDD 接線 | AuthService 未裝 jest-cucumber | jest-cucumber@4.5.0 + login-access.steps.ts（4 場景全綠） | 2026-07-09 完成（§9） |
 | ✅ 已完成 | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector（明文唯一索引）+ verifier（SHA-256 固定時間比對）+ reuse detection（連坐撤銷整組 token + TOKEN_REUSE_DETECTED audit） | 2026-07-09 完成；本機 DB migrate 實套 + e2e smoke 12/12、jest 21 綠 |
 | ✅ 已完成 | 登入防暴力 | 無失敗計數/鎖定/告警 | 依 **(帳號, IP) 複合**失敗計數、暫時鎖定（連錯 **10** 次鎖 **15** 分，可用 env 調）、`LOGIN_LOCKED` audit/alert；被鎖回 **429**「稍後再試」 | 2026-07-09 完成（§10.1）；code+jest 綠，migration 待本機實套 |
-| **P3** | 密碼政策落地 | 政策文件已定、程式未完整 | 12 碼、弱/外洩密碼檢查、重設流程 | 待做 |
+| ✅ 已完成 | 密碼政策落地 | 僅檢查 8 碼，政策文件其餘規則未落地 | ≥12 碼、黑名單+zxcvbn 擋弱/可預測、擋個資型密碼、重設不可與現用相同；套用於 create/reset | 2026-07-09 完成（§10.2）；**自助 email 重設流程另立一輪** |
 | **P4** | Google 登入 | 前端有按鈕、後端無端點 | 對接 Google OAuth；預先佈建+公司網域+external subject linking（用 `logtoSub` 欄位） | 待做 |
 | **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | 待做 |
 | **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | 待做 |
@@ -149,6 +149,26 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 測試：`login-throttle.spec.ts`（6 tests，真 `AuthController.login()` + 有狀態的 in-memory `loginAttempt` fake）：達門檻由 401 轉 429、鎖定期短路不查帳號、(username,IP) 各自獨立、逾窗計數歸零、成功清零、密碼不入 audit。全套 jest 6 suites / 27 tests 綠、lint 綠、build 綠。
 
 **未套用**：本機 DB migration 尚未實跑（`migrate deploy` 被 auto 模式當 production 擋下）；套用指令見交接。競態備註：`registerFailedAttempt` 用 read-then-upsert，內部低併發可接受；極端並發下計數可能少算 1，不影響鎖定最終生效。
+
+### 10.2 P3 密碼政策落地（password policy，2026-07-09 完成）
+
+範圍（Steven 2026-07-09 拍板）：**密碼強度政策 + 更新政策文件**；弱/外洩密碼用**內建黑名單 + zxcvbn**（離線、無外部連線）。自助「忘記密碼」email 重設流程（需寄信基礎建設 + reset token 表）**另立一輪**，本輪不做。
+
+實作 `src/auth/password-policy.ts`（`assertPasswordMeetsPolicy(password, owner)`），套用於 `UsersController.create()` 與 `resetPassword()`：
+
+- **≥ 12 碼**（原本只檢查 8；`MIN_PASSWORD_LENGTH` 匯出供前端/測試對齊）。
+- **擋弱/可預測**：小型常見密碼黑名單（明確拒絕訊息）+ `zxcvbn@4.4.2` 強度估計要求分數 **≥ 3**（0–4）。zxcvbn 內建字典即涵蓋常見/外洩密碼與鍵盤序列、leetspeak。
+- **擋個資型密碼**：username / email（含 @ 前段）/ 顯示名稱 / 員工編號，精確內嵌硬擋（BadRequest），並把這些識別碼餵給 zxcvbn 的 `user_inputs`，讓「姓名+數字」這類近似也算可猜。
+- **重設不可與現用相同**（政策 §2）：`resetPassword` 以 bcrypt 比對現有 `passwordHash`，相同則拒絕。
+- 錯誤訊息全英文（沿慣例），前端 `auth-api.ts` 翻譯表補 5 筆對應中文（P2 教訓：訊息靠英文原字串當 key）。
+
+前端（AuthPortal）：`AdminUsersPage.vue` 建立/重設的長度前檢 8→12；兩處 catch 改用 `getAuthApiErrorMessage` 讓後端政策拒絕原因浮現（原本吞成「新增/重設失敗」）。
+
+政策文件 `docs/process/PASSWORD_POLICY.md` 同步更新為 native 現實（原文假設 Logto）：擋弱密碼機制改 AuthService 自建、§3 鎖定 5 次→10 次且 (帳號,IP) 複合、§7 儲存改 bcrypt cost 12、§5 標註自助 email 重設待後續。
+
+測試：`password-policy.spec.ts`（8 tests：長度、常見、個資內嵌、近似、強通過、訊息不回顯密碼）。全套 jest **7 suites / 35 tests 綠**、lint 綠、build 綠；AuthPortal `vue-tsc` 綠。
+
+**未做（後續一輪）**：自助「忘記密碼」email 重設（reset token 表 + 寄信）、管理員「不得得知明文／首登強制改密」目標態、密碼歷史多筆（目前只擋與「現用」相同）。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
