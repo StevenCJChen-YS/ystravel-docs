@@ -132,7 +132,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | Google 登入 | 前端有按鈕、後端無端點 | 後端接 Google OAuth Authorization Code flow；預先佈建 + 公司網域 `hd` 提示 + external subject linking 改用獨立 `AuthIdentity` 模型（移除 `logtoSub`）；callback 只帶一次性 `authCode` 換 native token | 2026-07-09 完成（§10.3）；詳見 `../auth-google-login/sd.md`；jest 含 google/auth 9 tests 綠、lint/build 綠 |
 | ✅ 已完成 | 跨系統 SSO 打通 | 已在 AuthPortal 登入，進 CRM 仍被要求重登；系統卡片 URL 本地開發指向錯誤 | AuthPortal 登入頁「已登入→驗證後靜默發 token 導回請求 app」；系統卡片 URL 環境化（dev/prod 自動切）；純前端、後端 token 不綁 app 免改 | 2026-07-09 完成（§10.4）；AuthPortal + CRM 前端、typecheck/build 綠、Steven 手動 QA 通過 |
 | **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | **暫緩**（Steven 2026-07-09 決定：先做跨系統 SSO/logout，上線前再回頭補）|
-| **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | **部分完成**（§10.4：前端「乾淨登出」＝跨 app 清 session + 登出後回入口頁已做；**完整 token 撤銷式 SLO＝短效期 access token 即時失效仍待做**）|
+| **P6** | Single Logout + 跨 app token 獨立 | (1) `/auth/logout` 只撤 refresh，access 到期前仍短暫有效；(2) **AuthPortal 與 CRM 共用同一顆會輪替的 refresh token**，一邊輪替後另一邊 F5 再驗證會失效並繞行（Steven 確認「絕對會有問題」，須根治） | session registry / token version / revocation cache；**改為每個 app 發放獨立 refresh token**（後端加「憑既有 session 換發指定 app token」的端點，取代前端直接複製 token） | **部分完成**（§10.4：乾淨登出已做）；**token 獨立化為 P6 必修**，Steven 2026-07-09 拍板留待本輪 |
 
 ### 10.1 P2 登入防暴力（brute-force throttle，2026-07-09 完成）
 
@@ -201,7 +201,13 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 
 **驗證**：AuthPortal / CRM 前端 `vue-tsc -b` typecheck 綠、`vite build` 綠。
 
-**未做（歸入 P6 完整 SLO）**：這輪是「乾淨登出」＝跨 app 清 session。**尚未做**短效期 access token 的即時撤銷（登出後 access token 在到期前仍短暫有效），那需要後端 token-version / revocation cache，屬 P6 完整 SLO。另 EIP 卡片 dev URL 用預設 `:5173`（EIP＝GInternational，實際 dev port 未驗，可用 `VITE_EIP_FRONTEND_BASE_URL` 覆寫）。
+**轉場優化（同輪追加）**：
+- **入口直接握手**：已登入時，「我的系統」卡片與導覽列下拉點 CRM 會直接把 token 導到 CRM 的 `/auth/callback`（`useAccessibleSystems` + `buildSystemLaunchHref`），跳過「CRM→AuthPortal 登入頁→CRM」往返，不再閃登入頁。未登入或不支援握手的系統回退原本入口 href。
+- **中性 loading**：登入頁 `initializing` / 靜默轉導期間整頁只顯示中性「登入中…」，不露出登入大圖與表單，改善 F5、卡片 fallback 等繞經登入頁的視覺。
+
+**⚠️ 已知問題（Steven 確認「絕對會有問題」，根治留 P6）**：入口握手與登入導回都是把 **AuthPortal 的 token 複製給 CRM** → 兩 app 共用同一顆會輪替的 refresh token。當一邊 refresh 輪替（P1 的 rotation + reuse detection），另一邊持有的舊 token 失效；F5 再驗證時就會失效並繞經登入頁（本輪用中性 loading 遮住視覺，但底層繞行仍在）。**根治＝每個 app 發放獨立 refresh token**（後端加換發端點，見 P6 列），不再前端直接複製 token。
+
+**未做（歸入 P6）**：(1) 短效期 access token 即時撤銷（登出後 access 到期前仍短暫有效）需 token-version / revocation cache；(2) 上述跨 app token 獨立化。另 EIP 卡片 dev URL 用預設 `:5173`（EIP＝GInternational，實際 dev port 未驗，可用 `VITE_EIP_FRONTEND_BASE_URL` 覆寫）。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
