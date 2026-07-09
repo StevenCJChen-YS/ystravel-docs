@@ -50,6 +50,20 @@
 | Body / Help | 固定 `text-sm` |
 | Meta / code / timestamp | 固定 `text-xs` |
 
+### 2.1 響應式縮放原則（2026-07-09 視覺巡檢定案）
+
+- **大字才縮、小字不縮**：大標題（28px+）小螢幕可降一~兩階；body/說明（14~16px）與小字（12px）已在可讀性底線，**不隨斷點縮小**。
+- **文字灰階四階**（工具頁鎖色版的具體值；內頁用 §3.3 semantic token 同層級）：
+
+| 階層 | 鎖色值（slate 調） | semantic 對應 | 用途 |
+|---|---|---|---|
+| 主文字 | `#15242c` | `text-highlighted` | 標題 |
+| 標籤 | `#40525a` | `text-default` | 欄位標籤 |
+| 說明 | `#66777d` | `text-toned`/`text-muted` | 輔助句 |
+| 淡化 | `#8b9ba0` | `text-muted` | placeholder、次要連結、提示 |
+
+- **灰階色溫跟品牌走**：本系統為冷色家族（teal/blue），灰階一律用 **slate**（帶藍灰），不用純 grey/zinc/stone——純中性灰在冷色環境會顯得髒（Steven 2026-07-09 確認維持 slate）。
+
 ---
 
 ## 3. Base — 色彩（共用語意色）
@@ -96,6 +110,21 @@
   - Filled neutral：`color="neutral" variant="soft"`（`neutral solid` 會近黑，避免當一般灰按鈕）
   - Risky：`warning soft`；Destructive：`error soft`/`outline`
   - 同一 view 只保留一個最強 primary。
+- **間距節奏（8 點網格，2026-07-09 定案）**：
+  - 所有間距用 4/8 的倍數（8、16、24、32…），不用 10、18、22 這類亂數。
+  - 親疏原則：**群組內 8px、群組間 24px**——用距離表達「誰跟誰一組」。
+  - 響應式：小螢幕收攏**結構性留白**（頁面外距 24→16、卡片內距 32→20~24）；**節奏性間距（8/24）不縮**，縮了層次就亂。
+
+### 4.1 表單輸入規範（2026-07-09 定案，AuthPortal 已落地於 vite.config input theme）
+
+| 規則 | 值 | 原因 |
+|---|---|---|
+| 輸入框字級 | **手機（<640px）16px、桌面 14px** | iOS 點擊 <16px 的輸入框會觸發整頁自動放大；桌面 14px 對齊 compact 表單密度 |
+| placeholder | 手機縮小為 `text-sm`（14px）顯示 | FB 同款技巧：iOS 縮放只看輸入文字字級，placeholder 可獨立縮小，視覺不笨重 |
+| 無標籤欄位 | 必須有欄位外說明文字撐住語意 | 標籤與 placeholder 不可同時缺席 |
+| 欄位標籤/說明/錯誤字級 | **固定 14px（text-sm），不隨 input size 放大** | 16px 底線只限輸入控件；NuxtUI formField `xl` 預設會讓標籤繼承容器 16px，已在 vite.config formField theme 鎖回（2026-07-10 登入頁實測發現） |
+| 適用範圍 | UInput `md`/`lg`；login 的 `xl` 為品牌特例不套 | 見 §6 |
+| 16px 底線範圍 | **只限輸入控件**（input/select/textarea） | 表格、標籤、說明等顯示文字不受限，手機照用 12~14px |
 
 ---
 
