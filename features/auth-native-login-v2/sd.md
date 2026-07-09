@@ -129,7 +129,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector（明文唯一索引）+ verifier（SHA-256 固定時間比對）+ reuse detection（連坐撤銷整組 token + TOKEN_REUSE_DETECTED audit） | 2026-07-09 完成；本機 DB migrate 實套 + e2e smoke 12/12、jest 21 綠 |
 | ✅ 已完成 | 登入防暴力 | 無失敗計數/鎖定/告警 | 依 **(帳號, IP) 複合**失敗計數、暫時鎖定（連錯 **10** 次鎖 **15** 分，可用 env 調）、`LOGIN_LOCKED` audit/alert；被鎖回 **429**「稍後再試」 | 2026-07-09 完成（§10.1）；code+jest 綠，migration 待本機實套 |
 | ✅ 已完成 | 密碼政策落地 | 僅檢查 8 碼，政策文件其餘規則未落地 | ≥12 碼、黑名單+zxcvbn 擋弱/可預測、擋個資型密碼、重設不可與現用相同；套用於 create/reset | 2026-07-09 完成（§10.2）；**自助 email 重設流程另立一輪** |
-| **P4** | Google 登入 | 前端有按鈕、後端無端點 | 對接 Google OAuth；預先佈建+公司網域+external subject linking（用 `logtoSub` 欄位） | 待做 |
+| ✅ 已完成 | Google 登入 | 前端有按鈕、後端無端點 | 後端接 Google OAuth Authorization Code flow；預先佈建 + 公司網域 `hd` 提示 + external subject linking 改用獨立 `AuthIdentity` 模型（移除 `logtoSub`）；callback 只帶一次性 `authCode` 換 native token | 2026-07-09 完成（§10.3）；詳見 `../auth-google-login/sd.md`；jest 含 google/auth 9 tests 綠、lint/build 綠 |
 | **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | 待做 |
 | **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | 待做 |
 
@@ -169,6 +169,17 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 測試：`password-policy.spec.ts`（8 tests：長度、常見、個資內嵌、近似、強通過、訊息不回顯密碼）。全套 jest **7 suites / 35 tests 綠**、lint 綠、build 綠；AuthPortal `vue-tsc` 綠。
 
 **未做（後續一輪）**：自助「忘記密碼」email 重設（reset token 表 + 寄信）、管理員「不得得知明文／首登強制改密」目標態、密碼歷史多筆（目前只擋與「現用」相同）。
+
+### 10.3 P4 Google 登入（2026-07-09 完成）
+
+完整設計見獨立 feature 文件 `../auth-google-login/`（prd / example-mapping / sa / sd）。安全債角度的重點：
+
+- **後端主導 OAuth**：AuthService 自己跑 Google Authorization Code flow（`google-auth-library`），新增 `GET /auth/google`、`GET /auth/google/callback`、`POST /auth/google/exchange`。callback 只帶一次性 `authCode` 導回前端，**token 不出現在 URL**。
+- **外部身分改用獨立模型**：移除歷史實驗殘留的 `AuthUser.logtoSub`，改用 `AuthIdentity`（`@@unique([provider, subject])` + `@@unique([userId, provider])`）做 external subject linking；另加短生命週期的 `OAuthState`、`AuthExchangeCode`（皆只存 hash）。migration `20260709170000_google_auth_identity_exchange`。
+- **`hd` 提示策略**：production 只設單一公司網域時帶 `hd` 導引公司帳號；**non-production 若設 `GOOGLE_ALLOWED_TEST_EMAILS` 則不送 `hd`**，避免私人 Gmail 白名單帳號在 Google 選號畫面被隱藏。後端放行仍以白名單為準；`GOOGLE_ALLOWED_TEST_EMAILS` 只影響 Google 登入、不影響帳密登入。
+- 測試：`google-auth.config.spec.ts` + `google-login.feature`/`.steps.ts`（BDD，涵蓋預建員工首登、再次登入、非白名單拒絕、停用拒絕、authCode 重放拒絕）。jest 含 google/auth 9 tests 綠、lint/build 綠。
+
+**未做（後續）**：`OAuthState`/`AuthExchangeCode` 背景清理 job（目前靠逾時失效）；前端 `CallbackPage.vue` 仍以 Steven 手動 QA 為主。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
