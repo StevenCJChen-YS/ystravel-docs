@@ -4,11 +4,13 @@
 |---|---|
 | 目的 | 定義員工登入 Ystravel 各系統（透過 AuthService SSO）時，密碼與帳號安全的最低規則 |
 | 適用範圍 | 所有內部員工帳號；主要規範「帳密登入」路徑（Google 登入的帳號安全由 Google 端負責） |
-| 對應 | `SECURITY_AND_ISO27001_BASELINE.md` §7.1 存取控制、§7.3 稽核；`docs/features/auth-foundation/architecture-decisions.md` |
-| 狀態 | 草稿（2026-07-08） |
+| 對應 | `SECURITY_AND_ISO27001_BASELINE.md` §7.1 存取控制、§7.3 稽核；`docs/features/auth-foundation/architecture-decisions.md`；`docs/features/auth-native-login-v2/sd.md` §10 |
+| 狀態 | 生效中（2026-07-09 更新為 native auth v2；原 2026-07-08 草稿假設 Logto，已作廢） |
 | 設計原則 | 依現代標準（NIST SP 800-63B）：**重長度、擋弱密碼、不強迫頻繁更換**，兼顧好用與合規 |
 
 ---
+
+> **實作位置（native auth v2）**：密碼強度規則由 AuthService 於伺服器端強制執行——`src/auth/password-policy.ts` 的 `assertPasswordMeetsPolicy()`，套用在建立使用者與（管理員）重設密碼兩條路徑。不再依賴 Logto。
 
 ## 1. 為什麼是「簡單」政策
 
@@ -19,16 +21,19 @@
 | 規則 | 設定 | 說明 |
 |---|---|---|
 | 最短長度 | **至少 12 碼** | 長度是最有效的防護 |
-| 擋弱密碼 | 禁用常見密碼與已知外洩密碼（如 `password`、`12345678`） | 由 Logto 內建密碼政策擋下 |
-| 擋個資型密碼 | 不可用 email、姓名、員工編號當密碼 | |
+| 擋弱密碼 | 禁用常見/可預測密碼與已知外洩密碼（如 `password`、鍵盤序列、字典詞 leetspeak） | AuthService 自建：內建常見密碼黑名單 + `zxcvbn` 強度估計（要求分數 ≥ 3）；zxcvbn 字典即涵蓋常見/外洩密碼 |
+| 擋個資型密碼 | 不可用 email、姓名、帳號、員工編號當密碼（含 email @ 前段） | 精確內嵌硬擋，並餵給 zxcvbn 擋「姓名+數字」這類近似 |
 | 大小寫/符號 | **不強制**特定組合 | 以長度與擋弱密碼取代 |
 | 定期更換 | **不強制**定期更換 | 僅在「疑似或確認外洩」時要求重設 |
-| 密碼重用 | 重設時不可與前一次相同 | |
+| 密碼重用 | 重設時不可與目前密碼相同 | 重設時以 bcrypt 比對現有雜湊；不符才放行 |
 
 ## 3. 帳號鎖定（防暴力破解）
 
-- 連續登入失敗 **5 次** → 帳號暫時鎖定 **15 分鐘**（或由管理員解鎖）。
-- 鎖定與解鎖事件寫入 audit log。
+- 連續登入失敗達門檻 → 該 **(帳號, 來源 IP)** 暫時鎖定；鎖定期間即使帳密正確也拒絕。
+- 目前設定：**連錯 10 次鎖 15 分鐘**（可由環境變數 `LOGIN_MAX_FAILURES` / `LOGIN_LOCK_MINUTES` / `LOGIN_FAILURE_WINDOW_MINUTES` 調整；預設 10/15/15）。
+- 鎖定對象為 (帳號, IP) 複合，避免惡意連錯把他人帳號鎖死。
+- 登入失敗（`LOGIN_DENIED`）、觸發鎖定與鎖定期再嘗試（`LOGIN_LOCKED`）皆寫入 audit log。
+- 實作見 `sd.md` §10.1、`src/auth/auth.controller.ts`。
 
 ## 4. 兩步驟驗證（2FA / TOTP）
 
@@ -42,8 +47,9 @@
 
 ## 5. 密碼重設流程
 
-- 員工自助：透過「忘記密碼」以公司 email 收重設連結（連結有時效、一次性）。
-- 管理員協助：IT 可觸發重設，但**不得直接得知或設定使用者明文密碼**；一律走「發重設連結／要求首次登入強制改密」。
+- 員工自助：透過「忘記密碼」以公司 email 收重設連結（連結有時效、一次性）。**（自助 email 流程尚未實作，列為後續一輪）**
+- 管理員協助：IT 可觸發重設（`PUT /users/:id/password`，需 `AUTH.USER.MANAGE`）；重設時強制套用本政策 §2（含不可與目前密碼相同），並撤銷該使用者所有既有 refresh token、寫 `USER_PASSWORD_RESET` audit。
+  - 目標態：管理員**不得直接得知或設定使用者明文密碼**，改走「發重設連結／首次登入強制改密」。此目標態與自助 email 流程一併於後續實作。
 - 重設事件寫入 audit log。
 
 ## 6. 稽核（對應 baseline §7.3）
@@ -52,7 +58,7 @@
 
 ## 7. 儲存與傳輸
 
-- 密碼一律由 IdP（Logto）以標準演算法**雜湊**儲存，系統任何一處**不得**儲存或記錄明文密碼。
+- 密碼由 AuthService 以 **bcrypt（cost 12）雜湊**儲存，系統任何一處**不得**儲存或記錄明文密碼（登入失敗 audit 只記嘗試的帳號、絕不記密碼）。
 - 登入傳輸走 HTTPS。
 - 密碼、金鑰、client secret 不得寫死在程式碼、文件或 log（baseline §7.2）。
 
