@@ -122,6 +122,7 @@
 | 輸入框字級 | **手機（<640px）16px、桌面 14px** | iOS 點擊 <16px 的輸入框會觸發整頁自動放大；桌面 14px 對齊 compact 表單密度 |
 | placeholder | 手機縮小為 `text-sm`（14px）顯示 | FB 同款技巧：iOS 縮放只看輸入文字字級，placeholder 可獨立縮小，視覺不笨重 |
 | 無標籤欄位 | 必須有欄位外說明文字撐住語意 | 標籤與 placeholder 不可同時缺席 |
+| 欄位標籤/說明/錯誤字級 | **固定 14px（text-sm），不隨 input size 放大** | 16px 底線只限輸入控件；NuxtUI formField `xl` 預設會讓標籤繼承容器 16px，已在 vite.config formField theme 鎖回（2026-07-10 登入頁實測發現） |
 | 適用範圍 | UInput `md`/`lg`；login 的 `xl` 為品牌特例不套 | 見 §6 |
 | 16px 底線範圍 | **只限輸入控件**（input/select/textarea） | 表格、標籤、說明等顯示文字不受限，手機照用 12~14px |
 
