@@ -127,11 +127,28 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | 登入失敗 audit | 失敗路徑未留痕，BDD 場景要求要留 | login 失敗補 LOGIN_DENIED audit + login-audit.spec.ts | 2026-07-09 完成（§9） |
 | ✅ 已完成 | BDD 接線 | AuthService 未裝 jest-cucumber | jest-cucumber@4.5.0 + login-access.steps.ts（4 場景全綠） | 2026-07-09 完成（§9） |
 | ✅ 已完成 | Refresh token 查找 | `findActiveRefreshToken` 全表掃描逐筆 bcrypt | selector（明文唯一索引）+ verifier（SHA-256 固定時間比對）+ reuse detection（連坐撤銷整組 token + TOKEN_REUSE_DETECTED audit） | 2026-07-09 完成；本機 DB migrate 實套 + e2e smoke 12/12、jest 21 綠 |
-| **P2** | 登入防暴力 | 無失敗計數/鎖定/告警 | 依帳號/IP 失敗計數、暫時鎖定（連錯 5 次鎖 15 分，對齊密碼政策）、audit+alert | 待做 |
+| ✅ 已完成 | 登入防暴力 | 無失敗計數/鎖定/告警 | 依 **(帳號, IP) 複合**失敗計數、暫時鎖定（連錯 **10** 次鎖 **15** 分，可用 env 調）、`LOGIN_LOCKED` audit/alert；被鎖回 **429**「稍後再試」 | 2026-07-09 完成（§10.1）；code+jest 綠，migration 待本機實套 |
 | **P3** | 密碼政策落地 | 政策文件已定、程式未完整 | 12 碼、弱/外洩密碼檢查、重設流程 | 待做 |
 | **P4** | Google 登入 | 前端有按鈕、後端無端點 | 對接 Google OAuth；預先佈建+公司網域+external subject linking（用 `logtoSub` 欄位） | 待做 |
 | **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | 待做 |
 | **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | 待做 |
+
+### 10.1 P2 登入防暴力（brute-force throttle，2026-07-09 完成）
+
+設計選擇（Steven 2026-07-09 拍板，偏離草案處已標註）：
+
+- **鎖定維度：(username, IP) 複合**（非草案的「帳號或 IP 擇一」）。只鎖帳號會被惡意連錯把別人鎖死；只鎖 IP 對同出口多人不公平。以正規化 username（`trim().toLowerCase()`）+ client IP 為 key。
+- **門檻／時長：連錯 10 次鎖 15 分**（草案是 5 次；改 10 次降低誤鎖真人）。皆可 env 覆寫：`LOGIN_MAX_FAILURES` / `LOGIN_LOCK_MINUTES` / `LOGIN_FAILURE_WINDOW_MINUTES`（預設 10 / 15 / 15）。
+- **計數儲存：專用表 `login_attempts`**（非直接掃 `audit_logs`）。欄位 `(username, ipAddress)` 唯一索引 + `failedCount` / `lockedUntil` / `lastFailedAt`；查詢快、鎖定狀態可原子維護。migration `20260709140000_login_attempt_throttle`。
+- **被鎖回應：HTTP 429「Too many failed login attempts. Please try again later.」**（前端可據狀態碼區分「稍後再試」；訊息本身仍不透露帳號是否存在）。
+
+流程：`login()` 進入先 `assertNotLocked()`——若該 (username, IP) 仍在鎖定窗內，直接 429 且**不查帳號、不比密碼**（鎖定期間無法被試探）。任何憑證失敗（`USER_NOT_FOUND`/`USER_DISABLED`/`NO_PASSWORD`/`BAD_PASSWORD`）走 `denyLogin()`：`registerFailedAttempt()` 累加計數（上次失敗超過 window 或前次鎖已過期則歸零重算），仍寫既有 `LOGIN_DENIED` audit；當這次失敗觸發鎖定，另寫一筆 `LOGIN_LOCKED`（reason `THRESHOLD_REACHED`）作告警並回 429。登入成功則 `clearFailedAttempts()` 清該 (username, IP) 的計數。成功登入的 `LOGIN` audit 亦補記 `ipAddress`。
+
+告警落點：查 `audit_logs WHERE action='LOGIN_LOCKED'`——`THRESHOLD_REACHED`=剛觸發鎖定、`ACCOUNT_LOCKED`=鎖定期間又被嘗試。
+
+測試：`login-throttle.spec.ts`（6 tests，真 `AuthController.login()` + 有狀態的 in-memory `loginAttempt` fake）：達門檻由 401 轉 429、鎖定期短路不查帳號、(username,IP) 各自獨立、逾窗計數歸零、成功清零、密碼不入 audit。全套 jest 6 suites / 27 tests 綠、lint 綠、build 綠。
+
+**未套用**：本機 DB migration 尚未實跑（`migrate deploy` 被 auto 模式當 production 擋下）；套用指令見交接。競態備註：`registerFailedAttempt` 用 read-then-upsert，內部低併發可接受；極端並發下計數可能少算 1，不影響鎖定最終生效。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
