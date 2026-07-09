@@ -132,7 +132,7 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | Google 登入 | 前端有按鈕、後端無端點 | 後端接 Google OAuth Authorization Code flow；預先佈建 + 公司網域 `hd` 提示 + external subject linking 改用獨立 `AuthIdentity` 模型（移除 `logtoSub`）；callback 只帶一次性 `authCode` 換 native token | 2026-07-09 完成（§10.3）；詳見 `../auth-google-login/sd.md`；jest 含 google/auth 9 tests 綠、lint/build 綠 |
 | ✅ 已完成 | 跨系統 SSO 打通 | 已在 AuthPortal 登入，進 CRM 仍被要求重登；系統卡片 URL 本地開發指向錯誤 | AuthPortal 登入頁「已登入→驗證後靜默發 token 導回請求 app」；系統卡片 URL 環境化（dev/prod 自動切）；純前端、後端 token 不綁 app 免改 | 2026-07-09 完成（§10.4）；AuthPortal + CRM 前端、typecheck/build 綠、Steven 手動 QA 通過 |
 | **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | **暫緩**（Steven 2026-07-09 決定：先做跨系統 SSO/logout，上線前再回頭補）|
-| **P6** | Single Logout + 跨 app token 獨立 | (1) `/auth/logout` 只撤 refresh，access 到期前仍短暫有效；(2) **AuthPortal 與 CRM 共用同一顆會輪替的 refresh token**，一邊輪替後另一邊 F5 再驗證會失效並繞行（Steven 確認「絕對會有問題」，須根治） | session registry / token version / revocation cache；**改為每個 app 發放獨立 refresh token**（後端加「憑既有 session 換發指定 app token」的端點，取代前端直接複製 token） | **部分完成**（§10.4：乾淨登出已做）；**token 獨立化為 P6 必修**，Steven 2026-07-09 拍板留待本輪 |
+| ✅ 大部分完成 | Single Logout + 跨 app token 獨立 | (1) 跨 app 共用會輪替的 refresh token → F5 失效繞行；(2) logout 只撤單顆 | **每個 app 發獨立 token**：`app-exchange`（已登入換一次性碼）+ `session/exchange`（用碼換該 app 自己的 token，`RefreshToken.appCode` 標記、各自輪替鏈）；前端全改「換碼→導向」不再複製 token；**logout 改單一登出**（撤該使用者全部 token，`revokedReason` 區分登出/輪替避免誤觸 reuse） | 2026-07-09 完成（§10.5）；migration `20260709180000`；jest 50 綠、Steven QA 通過（F5 不再繞行、單一登出 OK）。**唯一未做＝短效期 access token 即時撤銷**（登出後 access 到期前仍短暫有效，Steven 拍板接受 ≤15 分窗口，需 token-version/revocation cache 再談）|
 
 ### 10.1 P2 登入防暴力（brute-force throttle，2026-07-09 完成）
 
@@ -208,6 +208,27 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 **⚠️ 已知問題（Steven 確認「絕對會有問題」，根治留 P6）**：入口握手與登入導回都是把 **AuthPortal 的 token 複製給 CRM** → 兩 app 共用同一顆會輪替的 refresh token。當一邊 refresh 輪替（P1 的 rotation + reuse detection），另一邊持有的舊 token 失效；F5 再驗證時就會失效並繞經登入頁（本輪用中性 loading 遮住視覺，但底層繞行仍在）。**根治＝每個 app 發放獨立 refresh token**（後端加換發端點，見 P6 列），不再前端直接複製 token。
 
 **未做（歸入 P6）**：(1) 短效期 access token 即時撤銷（登出後 access 到期前仍短暫有效）需 token-version / revocation cache；(2) 上述跨 app token 獨立化。另 EIP 卡片 dev URL 用預設 `:5173`（EIP＝GInternational，實際 dev port 未驗，可用 `VITE_EIP_FRONTEND_BASE_URL` 覆寫）。
+
+### 10.5 P6 跨 app 獨立 token + 單一登出（2026-07-09 完成）
+
+**根治先前的共用 token 問題**：不再把 AuthPortal 的 token 複製給 CRM，改成每個 app 拿自己的一張，各自維持獨立輪替鏈，一邊輪替不影響另一邊（F5 不再失效繞行）。
+
+**後端（AuthService）**：
+- `RefreshToken` 加 `appCode`（所屬 app）、`revokedReason`（`ROTATED`/`LOGOUT`/`REUSE`/`DISABLED`）。migration `20260709180000_per_app_refresh_tokens`；`AuthExchangeCode.provider` 改可空（null = 內部 SSO 握手碼，GOOGLE 維持給 Google 登入）。
+- 新端點：`POST /auth/app-exchange`（`JwtAuthGuard`，已登入使用者替某 app 換一次性握手碼）、`POST /auth/session/exchange`（用握手碼換該 app 自己的一組 native token，新 token 帶 `appCode`；只收 provider=null 的碼）。login/refresh/google-exchange 的發 token 都補上 `appCode`；refresh 輪替沿用同一 `appCode`。
+- **單一登出**：`logout` 由「撤單顆」改為「撤該使用者全部仍有效 token」（`revokedReason='LOGOUT'`）。reuse detection 特例：被 `LOGOUT` 撤銷的 token 事後被重放 → 純 401、不連坐撤銷、不告警（否則會殺掉登出後重新登入的新 session）。
+- 測試：`sso-handoff.spec.ts`（5）+ 更新 `refresh-token-selector.spec.ts`；jest 全套 **50 綠**、lint/build 綠。
+
+**前端（AuthPortal + CRM）**：
+- AuthPortal：入口卡片 / 導覽列下拉（`useAccessibleSystems.launchSystem`）、登入導向（`LoginPage`）、Google callback（`CallbackPage`）全改「先 `app-exchange` 換碼 → 導到 `${CRM}/CRM/auth/callback?code=...`」；不再把 token 放進網址（更安全）。換碼失敗回退直接開該 app。
+- CRM：`AuthCallbackView` → `completeCallback` 讀 `?code=` → `POST /auth/session/exchange` 換取 CRM 自己的 token。
+
+**驗證**：Steven 手動 QA 通過——F5 不再繞行、卡片/下拉免重登、單一登出。typecheck/build 綠。
+
+**未做 / 待辦**：
+- **短效期 access token 即時撤銷**：登出後已發的 access token 在到期前（≤15 分）仍有效，Steven 拍板接受此窗口；如需即時失效再做 token-version / revocation cache。
+- **CRM SSO callback 過場頁樣式優化**：`Ystravel-CRM-Frontend/src/views/AuthCallbackView.vue` 的「登入中…」是業界標準 SSO 過場頁（Google/Okta/Auth0 皆有），**保留不移除**，但樣式待美化（品牌一致、過場更順）。
+- EIP 卡片 dev URL 仍用預設 `:5173`（可 `VITE_EIP_FRONTEND_BASE_URL` 覆寫）。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
