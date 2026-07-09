@@ -130,8 +130,9 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 | ✅ 已完成 | 登入防暴力 | 無失敗計數/鎖定/告警 | 依 **(帳號, IP) 複合**失敗計數、暫時鎖定（連錯 **10** 次鎖 **15** 分，可用 env 調）、`LOGIN_LOCKED` audit/alert；被鎖回 **429**「稍後再試」 | 2026-07-09 完成（§10.1）；code+jest 綠，migration 待本機實套 |
 | ✅ 已完成 | 密碼政策落地 | 僅檢查 8 碼，政策文件其餘規則未落地 | ≥12 碼、黑名單+zxcvbn 擋弱/可預測、擋個資型密碼、重設不可與現用相同；套用於 create/reset | 2026-07-09 完成（§10.2）；**自助 email 重設流程另立一輪** |
 | ✅ 已完成 | Google 登入 | 前端有按鈕、後端無端點 | 後端接 Google OAuth Authorization Code flow；預先佈建 + 公司網域 `hd` 提示 + external subject linking 改用獨立 `AuthIdentity` 模型（移除 `logtoSub`）；callback 只帶一次性 `authCode` 換 native token | 2026-07-09 完成（§10.3）；詳見 `../auth-google-login/sd.md`；jest 含 google/auth 9 tests 綠、lint/build 綠 |
-| **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | 待做 |
-| **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | 待做 |
+| ✅ 已完成 | 跨系統 SSO 打通 | 已在 AuthPortal 登入，進 CRM 仍被要求重登；系統卡片 URL 本地開發指向錯誤 | AuthPortal 登入頁「已登入→驗證後靜默發 token 導回請求 app」；系統卡片 URL 環境化（dev/prod 自動切）；純前端、後端 token 不綁 app 免改 | 2026-07-09 完成（§10.4）；AuthPortal + CRM 前端、typecheck/build 綠、Steven 手動 QA 通過 |
+| **P5** | 2FA | 管理員強制已拍板、native 未實作 | TOTP；高權限強制、一般員工自願 | **暫緩**（Steven 2026-07-09 決定：先做跨系統 SSO/logout，上線前再回頭補）|
+| **P6** | Single Logout | `/auth/logout` 只撤 refresh，access 到期前仍短暫有效 | session registry / token version / revocation cache，再談 SLO | **部分完成**（§10.4：前端「乾淨登出」＝跨 app 清 session + 登出後回入口頁已做；**完整 token 撤銷式 SLO＝短效期 access token 即時失效仍待做**）|
 
 ### 10.1 P2 登入防暴力（brute-force throttle，2026-07-09 完成）
 
@@ -180,6 +181,27 @@ AuthService 自己做完整登入：`POST /auth/login` 驗帳密、發 access to
 - 測試：`google-auth.config.spec.ts` + `google-login.feature`/`.steps.ts`（BDD，涵蓋預建員工首登、再次登入、非白名單拒絕、停用拒絕、authCode 重放拒絕）。jest 含 google/auth 9 tests 綠、lint/build 綠。
 
 **未做（後續）**：`OAuthState`/`AuthExchangeCode` 背景清理 job（目前靠逾時失效）；前端 `CallbackPage.vue` 仍以 Steven 手動 QA 為主。
+
+### 10.4 跨系統 SSO 打通 + 登出收斂（2026-07-09 完成，純前端）
+
+**背景**：SSO 骨架（CRM 導向 AuthPortal 登入、AuthPortal 發 token、CRM `/auth/callback` 換碼）原本已存在，但有兩個缺口，導致「明明 Auth 已登入、進 CRM 還要再登一次」以及「系統卡片連到錯誤網址」。
+
+**根因**：
+1. **AuthPortal 登入頁沒有「已登入就放行」邏輯**：`LoginPage.vue` 的 `onMounted` 只處理記住帳號/錯誤訊息，不檢查既有 session，所以每次都重新顯示登入表單 → 被迫重打密碼。
+2. **系統卡片 URL 寫死上線用的相對路徑**：`accessible-systems.ts` 卡片用 `/CRM/`、`/`，上線後同網域反向代理正常，但本地開發各 app 跑不同 port（AuthPortal `:5174`、CRM `:5175`），`/CRM/` 會指到 AuthPortal 自己 → 連錯。
+
+**關鍵前提（決定純前端可行）**：`RefreshToken` 模型**不含 app 欄位**，`app`/`appCode` 只用於 audit 與導向 context，token 本身不綁 app。因此 AuthPortal 的 token 可直接交給 CRM 使用，**靜默 SSO 不需後端改動**。
+
+**改動**（AuthPortal + CRM 前端）：
+- **AuthPortal `LoginPage.vue`**：`onMounted` 改為——(a) `?loggedOut=1` → 呼叫 `auth.logout()` 清本站 session（避免被靜默 SSO 又彈回原 app）；(b) 已 `isAuthenticated` → `loadCurrentUser()` 驗證仍有效後 `redirectAfterLogin(app, redirect)` 靜默放行；(c) 否則正常顯示表單。加 `initializing` 狀態避免轉導時閃一下表單。
+- **AuthPortal `accessible-systems.ts`**：卡片 base URL 環境化（`resolveBaseUrl` + `VITE_CRM_FRONTEND_BASE_URL` / `VITE_EIP_FRONTEND_BASE_URL`，dev 補 `:5175`/`:5173`、prod 用相對路徑），與 `LoginPage.vue`/CRM `auth-api.ts` 既有 dev/prod 判斷同一套。
+- **CRM `auth-api.ts` / `stores/auth.ts`**：新增 `buildAuthLogoutUrl()`（`?loggedOut=1`、**不帶 app**）；登出改導向它。效果＝登出會一併清掉 AuthPortal session，且重新登入後落在「我的系統」入口頁（Steven 拍板：不硬彈回原 app）。
+
+**目標行為**（Steven 手動 QA 通過）：已登入點 CRM 卡片免重登；卡片連到正確 dev URL；CRM 登出→回登入頁（不被彈回）→重登→落在「我的系統」。
+
+**驗證**：AuthPortal / CRM 前端 `vue-tsc -b` typecheck 綠、`vite build` 綠。
+
+**未做（歸入 P6 完整 SLO）**：這輪是「乾淨登出」＝跨 app 清 session。**尚未做**短效期 access token 的即時撤銷（登出後 access token 在到期前仍短暫有效），那需要後端 token-version / revocation cache，屬 P6 完整 SLO。另 EIP 卡片 dev URL 用預設 `:5173`（EIP＝GInternational，實際 dev port 未驗，可用 `VITE_EIP_FRONTEND_BASE_URL` 覆寫）。
 
 ### Key rotation note
 第一階段單一 active key。未來 rotation：JWKS 同時輸出 current + previous public keys；簽發只用 current private key；previous key 至少保留一個 access token 最長效期後再移除。
