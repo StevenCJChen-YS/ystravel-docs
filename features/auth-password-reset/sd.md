@@ -3,7 +3,9 @@
 | 項目 | 內容 |
 |---|---|
 | 對應 SA | ./sa.md |
-| 狀態 | 已確認（2026-07-09；§10 三項全採建議：nodemailer / INVITED enum / Mailpit） |
+| 狀態 | 已實作（2026-07-09；§10 三項全採建議：nodemailer / INVITED enum / Mailpit） |
+
+> **實作與驗證（2026-07-09）**：AuthService + AuthPortal 已完成。後端 jest 12 suites / 90 tests 綠（含 password-reset BDD 22 場景 + unit 18）、lint/build 綠；前端 vue-tsc / vite build 綠。migration `20260709210000_password_reset_and_invite` 已套本機 DB。**端到端實測（真實 DB + Mailpit）通過**：忘記密碼→收信→驗證→重設→舊連結失效(400)→舊密碼登入失敗、新密碼成功；邀請流程→邀請中不可登入→收邀請信→設定密碼→狀態轉 ACTIVE→登入成功。
 | 建立日期 | 2026-07-09 |
 
 ## 0. 白話摘要
