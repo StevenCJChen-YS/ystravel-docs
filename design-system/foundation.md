@@ -24,13 +24,15 @@
 
 ---
 
-## 1. 各系統主色（Theme 層，定案 2026-07-08）
+## 1. 各系統主色（Theme 層，2026-07-10 修訂）
 
 | 系統 | primary 主色 |
 |---|---|
-| **AuthPortal** | **Blue** |
-| **EIP**（未來） | **Teal** |
+| **AuthPortal** | **Teal** |
+| **EIP**（未來） | **Blue** |
 | **CRM** | **Violet** |
+
+> 2026-07-10 修訂：原定案（2026-07-08）為 Auth=Blue / EIP=Teal，但 AuthPortal 實作與登入頁品牌視覺（terminal 調色盤、信件尾板）已全面採 teal，Steven 拍板**現實勝出**：Auth=Teal 定案、EIP 未來改配 Blue。
 
 - 三色在色環上大致等距，最好辨識「我在哪個系統」。
 - 三個主色都**避開了語意色**（見 §3），不會跟成功/警告/資訊訊息撞色。
@@ -80,13 +82,16 @@
 
 > ⚠️ 各系統的 `primary` 主色（Blue/Teal/Violet）**不得使用上面任何一個**，否則主色會跟語意訊息撞色。
 
-### 3.2 中性底色分層（不只白底一層）
+### 3.2 中性底色分層（不只白底一層，2026-07-10 修訂）
+
 | Token | 用途 |
 |---|---|
-| `bg-default` | 整頁背景、sidebar、header、main 容器 |
-| `bg-muted` | toolbar、hover、表頭、次層背景 |
-| `bg-elevated` | card、panel、浮起表面 |
+| `bg-default` | sidebar、header、**內容區的 card/panel（白卡）** |
+| `bg-muted` | hover、次層背景 |
+| `bg-elevated` | **白卡上的次層帶**（表格 thead、卡片 header 底） |
 | `bg-accented` | 選取態、active nav、當前項目 |
+
+> ⚠️ 2026-07-10 實測發現：NuxtUI light mode 的 `bg-elevated` 與 slate-100 頁面底色**同值**，卡片用 `bg-elevated` 會糊進頁底。定案層次＝**頁面底 muted 灰（shell main）→ 卡片 `bg-default` 白 → 卡內次層帶 `bg-elevated`**；dark mode 同一組 token 自動成立（實測卡片比頁底亮一階）。
 
 ### 3.3 文字與邊框語意
 - 文字：`text-highlighted`（標題）／`text-default`（內文）／`text-toned`（中層）／`text-muted`（輔助）
