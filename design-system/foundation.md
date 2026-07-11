@@ -5,7 +5,7 @@
 | 文件性質 | 跨系統設計系統來源（source of truth） |
 | 適用範圍 | Ystravel-AuthPortal、Ystravel-CRM-Frontend、未來 EIP 前端 |
 | 技術 | NuxtUI v4 + Tailwind CSS v4 |
-| 狀態 | 草稿（2026-07-08） |
+| 狀態 | 草稿（2026-07-08；2026-07-12 對齊 07-11 拍板：主色 Auth=Blue、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
 | 前身 | 抽自 `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md`（2026-07-06，已相當成熟），升級為全公司共用版並加上「各系統主題層」 |
 
 ---
@@ -28,11 +28,11 @@
 
 | 系統 | primary 主色 |
 |---|---|
-| **AuthPortal** | **Teal** |
-| **EIP**（未來） | **Blue** |
+| **AuthPortal** | **Blue** |
+| **EIP**（未來） | **Teal** |
 | **CRM** | **Violet** |
 
-> 2026-07-10 修訂：原定案（2026-07-08）為 Auth=Blue / EIP=Teal，但 AuthPortal 實作與登入頁品牌視覺（terminal 調色盤、信件尾板）已全面採 teal，Steven 拍板**現實勝出**：Auth=Teal 定案、EIP 未來改配 Blue。
+> 2026-07-12 修訂：回到 2026-07-08 原定案 **Auth=Blue / EIP=Teal / CRM=Violet**。07-10 曾因 AuthPortal 實作全採 teal 而「現實勝出」翻成 Auth=Teal，**07-11 Steven 再拍板翻回 Auth=Blue**（後台已實作 `b70a73c`）。⚠️ 登入頁 terminal 調色盤與 AuthService 信件尾板目前仍是 teal，屬待跟進的收尾工作（登入頁＝平台門面，色彩收斂另議）。
 
 - 三色在色環上大致等距，最好辨識「我在哪個系統」。
 - 三個主色都**避開了語意色**（見 §3），不會跟成功/警告/資訊訊息撞色。
@@ -42,7 +42,7 @@
 
 ## 2. Base — Typography（共用）
 
-- **字體**：`--font-sans: "Aptos", "Noto Sans TC", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif`；mono：`JetBrains Mono`。
+- **字體（2026-07-12 對齊）**：`--font-sans: "Noto Sans TC Variable", "Noto Sans TC", "Segoe UI", ui-sans-serif, system-ui, sans-serif`——2026-07-11 **自架 Noto Sans TC webfont**（`@fontsource-variable/noto-sans-tc`，unicode-range 按需載），**Noto 排第一、Aptos 已移除**（先前靠系統字，Windows 中文實際落到微軟正黑體）；mono：`"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace`。
 - **文字層級**（內部系統以穩定可掃讀為優先，body 不隨斷點頻繁變動）：
 
 | 用途 | 大小 |
@@ -55,16 +55,17 @@
 ### 2.1 響應式縮放原則（2026-07-09 視覺巡檢定案）
 
 - **大字才縮、小字不縮**：大標題（28px+）小螢幕可降一~兩階；body/說明（14~16px）與小字（12px）已在可讀性底線，**不隨斷點縮小**。
-- **文字灰階四階**（工具頁鎖色版的具體值；內頁用 §3.3 semantic token 同層級）：
+- **文字灰階（語意 token → neutral 階；2026-07-12 對齊 gray 實際值）**——一律用 semantic token，下表 light 值供對照：
 
-| 階層 | 鎖色值（slate 調） | semantic 對應 | 用途 |
-|---|---|---|---|
-| 主文字 | `#15242c` | `text-highlighted` | 標題 |
-| 標籤 | `#40525a` | `text-default` | 欄位標籤 |
-| 說明 | `#66777d` | `text-toned`/`text-muted` | 輔助句 |
-| 淡化 | `#8b9ba0` | `text-muted` | placeholder、次要連結、提示 |
+| 階層 | semantic token | neutral 階 | light 值（gray） | 用途 |
+|---|---|---|---|---|
+| 主文字 | `text-highlighted` | neutral-900 | `#101828` | 標題 |
+| 標籤/內文 | `text-default` | neutral-700 | `#364153` | 欄位標籤、內文 |
+| 說明 | `text-toned` | neutral-600 | `#4a5565` | 輔助句 |
+| 淡化 | `text-muted` | neutral-500 | `#6a7282` | placeholder、次要連結、提示 |
+| 更淡 | `text-dimmed` | neutral-400 | `#99a1af` | 最弱提示、角標 |
 
-- **灰階色溫跟品牌走**：本系統為冷色家族（teal/blue），灰階一律用 **slate**（帶藍灰），不用純 grey/zinc/stone——純中性灰在冷色環境會顯得髒（Steven 2026-07-09 確認維持 slate）。
+- **灰階定案（2026-07-12 對齊，取代先前 slate）＝明暗混搭**：**light 用 gray**（帶微藍調）、**dark 用 zinc**（無彩度）。全案色階統一走 `neutral-*` 別名單一入口——light 家族由 `vite.config` `neutral: 'gray'` 管、dark 家族由 `main.css` 的 `.dark` 重指整組 oklch 管，換家族只動一處。演進：slate（07-09）→ zinc → gray → 明暗混搭定案。上表 light 值為 gray 家族；**dark 由 semantic token 自動翻低階變亮＋改 zinc 家族**（`main.css .dark` 寫死 zinc oklch，`--color-neutral-850` dark=`#1c1c1e`／light=`#172030`），不用另鎖 dark hex。
 
 ---
 
@@ -78,7 +79,7 @@
 | info | sky |
 | warning | amber |
 | error | rose |
-| neutral | slate |
+| neutral | gray（light）／zinc（dark）— 見 §2.1 |
 
 > ⚠️ 各系統的 `primary` 主色（Blue/Teal/Violet）**不得使用上面任何一個**，否則主色會跟語意訊息撞色。
 
@@ -88,8 +89,10 @@
 |---|---|
 | `bg-default` | sidebar、header、**內容區的 card/panel（白卡）** |
 | `bg-muted` | hover、次層背景 |
-| `bg-elevated` | **白卡上的次層帶**（表格 thead、卡片 header 底） |
+| `bg-elevated` | **白卡上的次層帶**（卡片 header 底） |
 | `bg-accented` | 選取態、active nav、當前項目 |
+
+> 表格 thead 另採**深色表頭白字**（2026-07-11 拍板，AuthPortal TableCard）：light `neutral-700`、dark `neutral-850`；斑馬紋偶列 `bg-muted`（dark neutral-800）、奇列走卡底 `neutral-900`——不走 `bg-elevated`。
 
 > ⚠️ 2026-07-10 實測發現：NuxtUI light mode 的 `bg-elevated` 與 slate-100 頁面底色**同值**，卡片用 `bg-elevated` 會糊進頁底。定案層次＝**頁面底 muted 灰（shell main）→ 卡片 `bg-default` 白 → 卡內次層帶 `bg-elevated`**；dark mode 同一組 token 自動成立（實測卡片比頁底亮一階）。
 
@@ -101,7 +104,7 @@
 
 ## 4. Base — 其他基礎（共用）
 
-- **圓角**：`--ui-radius: 0.5rem`
+- **圓角（2026-07-12 對齊）**：基準 `--ui-radius: 0.375rem`（sm=6 / md=9 / lg=12px；卡片與 modal 用 lg=12px）。**控件（btn/input/select）另走尺寸階梯**（vite.config size variants）：`xs=2 / sm=4 / md=6 / lg=8 / xl=10px`。演進：0.5rem（肥）→ 0.25（太尖）→ **0.375rem**（現行，Steven 驗收中）＋控件尺寸階梯。
 - **斷點**：base `<640` / sm `≥640` / md `≥768` / lg `≥1024` / xl `≥1280` / 2xl `≥1536`
 - **Layout tokens**：`--app-sidebar-width: 240px`、`--app-sidebar-collapsed-width: 4rem`、`--app-header-height: 70px`
 - **密度**（各系統可依任務調整）：
