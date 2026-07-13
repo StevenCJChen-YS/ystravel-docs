@@ -42,7 +42,7 @@
 
 ## 2. Base — Typography（共用）
 
-- **字體（2026-07-12 對齊）**：`--font-sans: "Noto Sans TC Variable", "Noto Sans TC", "Segoe UI", ui-sans-serif, system-ui, sans-serif`——2026-07-11 **自架 Noto Sans TC webfont**（`@fontsource-variable/noto-sans-tc`，unicode-range 按需載），**Noto 排第一、Aptos 已移除**（先前靠系統字，Windows 中文實際落到微軟正黑體）；mono：`"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace`。
+- **字體（2026-07-13 定案，推翻 07-11「自架 Noto 為主」）**：`--font-sans: "Microsoft JhengHei", "微軟正黑體", "PingFang TC", "Noto Sans TC Variable", "Noto Sans TC", "Segoe UI", ui-sans-serif, system-ui, sans-serif`——**全系統字**：Win 微軟正黑體、Mac 蘋方 PingFang TC、非 Win/Mac 自架 Noto 保底，**主字不用自架 webfont**。原因：自架 webfont（Noto／台北黑體／Inter）在 Windows 無 hinting 都糊，系統字有 hinting 最清晰（2026-07-13 完整試錯一輪驗證：微軟正黑體清晰、台北黑體/Inter 皆糊）。演進：靠系統字 → 自架 Noto（07-11）→ **回全系統字（07-13）**。mono：`"JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace`。
 - **文字層級**（內部系統以穩定可掃讀為優先，body 不隨斷點頻繁變動）：
 
 | 用途 | 大小 |
@@ -66,6 +66,13 @@
 | 更淡 | `text-dimmed` | neutral-400 | `#99a1af` | 最弱提示、角標 |
 
 - **灰階定案（2026-07-12 對齊，取代先前 slate）＝明暗混搭**：**light 用 gray**（帶微藍調）、**dark 用 zinc**（無彩度）。全案色階統一走 `neutral-*` 別名單一入口——light 家族由 `vite.config` `neutral: 'gray'` 管、dark 家族由 `main.css` 的 `.dark` 重指整組 oklch 管，換家族只動一處。演進：slate（07-09）→ zinc → gray → 明暗混搭定案。上表 light 值為 gray 家族；**dark 由 semantic token 自動翻低階變亮＋改 zinc 家族**（`main.css .dark` 寫死 zinc oklch，`--color-neutral-850` dark=`#1c1c1e`／light=`#172030`），不用另鎖 dark hex。
+
+### 2.2 字重（2026-07-13 定案）
+
+- **系統字只有兩檔粗細**：微軟正黑體 400/700（Light 300 不用於中文後台）、Mac 蘋方 100–600（**無 700**），跨平台實務交集＝**400（細）／700（粗）**。
+- **CSS 字重匹配有方向**（關鍵，別誤判）：`font-medium`(500) 往**下**靠 **400**（細）、`font-semibold`(600) 往**上**靠 **700**（粗）。所以 `semibold` 在系統字會匹配到實體 700 而變粗，`medium` 則等同 400。
+- **規則**：**標題／需強調 → `font-semibold`；一般內容 → `font-normal`；避免 `font-medium`**（medium 對系統字＝400、視覺無效；若字體堆疊混入西文 webfont〔如 Inter〕，medium 還會造成同排「英文粗、中文細」的斷層）。
+- 層次不只靠字重：善用字級（§2 表）＋文字灰階（§2.1 表）＋間距（§4）；後台 400/700 兩檔已足夠（EIP 用微軟正黑體亦僅此兩檔）。
 
 ---
 
@@ -142,6 +149,7 @@
 - 顏色偏好共用 storage key：`ystravel.platform.color-mode`（Auth/CRM/EIP 共用）。
 - 新頁面優先用 semantic class + NuxtUI color/variant，不硬寫 `bg-white`/`text-slate-*`。
 - **主色的 dark mode**：主色用中間調（如 blue/teal/violet 的 500/600），深色模式自動對應到淺一階（如 400），明暗兩模式對比都足夠——這也是當初不選 sky 當主色的原因（sky 太淺，暗色模式會刺眼/糊）。
+- **dark mode 浮層規則（2026-07-13 定案）**：dark 下陰影幾乎看不見 → 上層元素（modal／popover／各下拉 content／表格卡）改用 **`ring-1 dark:ring-white/25`（hairline）＋深色明度分層** 製造「在上層」感，**不靠 `shadow`**。明度階梯：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。switch thumb dark 白（`dark:bg-white`）。已抽到各 repo `vite.config` 的 modal／select／selectMenu／dropdownMenu theme 的 content slot，新元件自動套用。
 
 ---
 
