@@ -186,3 +186,25 @@
 ## 9. 待決策 / 待辦
 - [ ] 三系統 primary 的**確切色階**（例如 blue-600 或 blue-500 當亮色主色）——做 UI 時實測 light/dark 對比後定。
 - [ ] 是否需要把 Base token 做成一個共用 npm 套件 / 共用 CSS 檔，讓三 repo 真正共用而非各自複製（現階段先文件對齊，未來重複痛了再抽套件）。
+
+---
+
+## 10. 資料表格與順序管理範式（2026-07-14，AuthPortal 已落地）
+
+管理後台的資料表格與「顯示順序」維護，抽成一套共用範式，CRM／EIP 沿用（AuthPortal `src/shared/ui`＋`src/shared/composables`）。
+
+### 10.1 資料表格共用
+- **表頭外觀抽全域**：深色表頭白字／列高／內距寫在各 repo `vite.config` 的 **`table` theme**（不再逐頁寫 `:ui`）。要改表頭底色只動這一處。
+- **共用元件/組合式**：`TableCard`（白卡＋斑馬＋分頁 footer）、`TableLoading`（載入 spinner）、`FormModal`（valibot 行內驗證，關閉延後清狀態避免收場閃爍→`useEditModal`）、`ColumnVisibilityMenu`＋`useResponsiveColumns`（欄位顯示下拉＋響應式自動藏欄）、`DataToolbar`（搜尋＋篩選＋動作）。
+- 列表頁一律：`PageHeader → TableCard → DataToolbar → 深色表頭 UTable`；回饋走 toast、危險/切換動作走 `useConfirm`。
+
+### 10.2 順序（order）管理
+- **順序是主檔自己的屬性**，在該主檔管理頁維護（業界標準：Salesforce picklist／Odoo sequence／Shopify／WordPress）；存一份、所有 consumer（下拉／報表）讀同一份，**不要每個表單各自定義順序**。
+- **⚠️ 名詞**：「排序」中文有兩義——sort（升降冪）vs order（排列序位）。本節指**後者**。
+- **三原則**：
+  1. `order` 一律「**相對同層兄弟**」（部門＝同公司內、選項＝同類別內；未來多層分類樹同理），不用全域數字。
+  2. UI 用**拖曳**（共用 `OrderManager.vue`＝VueUse `useSortable` 握把拖＋「依名稱排序」一鍵＋**批次儲存/取消**，非邊拖邊存）。
+  3. 建立/編輯 modal **不放** order 數字欄，新增自動排到最後。
+- **數字給人看一律 1-based（`order+1`）**，0-based 只留程式內。
+- **後端**：reorder 端點收「排好的 id 陣列」→交易重編 0,1,2…＋audit。
+- **未做／未來**：多層分類樹（同原則延伸樹狀拖曳）；持久「自動/手動 sort mode」（現以「依名稱排序」一鍵 bake 字母序代替，Shopify/Salesforce 式）。
