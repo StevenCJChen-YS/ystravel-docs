@@ -223,13 +223,22 @@
 
 「看到會重複就當下抽」的落地成果（`src/shared/ui`）；CRM／EIP 沿用。
 
+### 11.0 icon-only 按鈕通則（2026-07-14 一天踩兩次，嚴格執行）
+
+RWD 收成 icon-only 的按鈕，藏字之後**問三件事：padding 等距了嗎？置中了嗎？aria-label 還在嗎？**
+
+1. **藏字用 `max-sm:hidden`**＋`aria-label`/`title` 保留全文；**不要**用 `max-md:size-10` 硬縮還留著文字（會擠爆）。
+2. **文字藏了 ≠ 正方**：按鈕仍留文字鈕的左右 padding（px-3 等）→ 橫長方形。要補**等距 padding**：md 尺寸鈕＝`max-sm:p-2.5`（10+16+10＝36×36，同全站 square md 規格）。實例：群組頁「加入成員」鈕。
+3. **固定尺寸放大觸控目標**（如 `max-md:size-10`）時必須同時 `:ui="{ base: 'justify-center p-0' }"`——UButton 預設非置中，固定尺寸＋原 padding 會讓 icon 偏離中心。實例：`ColumnVisibilityMenu`。
+
 ### 11.1 新增共用元件
-- **`ToolbarButton`**：工具列／頁首動作鈕（新增 XX、調整順序…）。桌面 icon＋文字，**`<sm` 收成 40×40 icon-only 正方**——用「文字 `max-sm:hidden` 藏＋`aria-label`/`title` 保留全文」的正法，**不要**用 `max-md:size-10` 硬縮（文字還在會擠爆）。可換 `color`/`variant`（新增＝primary solid、調整順序＝neutral outline）。
+- **`ToolbarButton`**：工具列／頁首動作鈕（新增 XX、調整順序…）。桌面 icon＋文字，**`<sm` 收成 40×40 icon-only 正方**（照 §11.0 通則）。可換 `color`/`variant`（新增＝primary solid、調整順序＝neutral outline）。
 - **`EmptyState`**：空狀態。`UEmpty variant="naked"`＋`border-dashed`（官方 outline/subtle 的框是 `ring`＝box-shadow，**做不了虛線**，naked＋class 疊）。`size` 對應 UEmpty 檔位：`sm`＝標題14/說明12/icon 縮小（窄欄用，內距鎖 24px 不隨螢幕長到 32），`md`＝大區塊。
 - **`FilterPanel`**（曾叫 `FilterDrawer`→`FilterModal`）：篩選收合殼，**RWD 分流：`<sm` 底部 `UDrawer`／`≥sm` `UModal`**（`useBreakpoints` 以 sm 為界）。「篩選 (N)」鈕＋footer 重置/取消/套用。兩種鈕模式：預設（鈕只 `<md` 出現，桌面平鋪下拉）、`alwaysVisible`（鈕常駐，搜尋為主頁用）。草稿流程由頁面持有：`@open` 拷真值進草稿、`@apply` 寫回真值。
   - ⚠️ **vaul（UDrawer）踩坑**：抽屜開啟殘留 `translate3d`→帶 transform 自成 GPU 合成層，**Windows 顯示縮放 125/150% 下文字糊**。但那只是「桌面 devtools 模擬手機」的假象、**真機正常**，故 `<sm` 用抽屜可接受。（曾一度全改 modal 避開，Steven 後來要手機回抽屜。別再為此加 `transform:none` 全域 hack。）
   - **dark 浮起 ring**：UDrawer 預設 `ring-default` 在 dark 看不見 → content 加 `dark:ring-white/25`（同 §5 浮層規則）。modal 端由全域 modal theme 自帶。
 - **`ListItemButton`**：左側清單項（群組清單／選項類別清單同款）。選中＝側欄同款灰 pill（`bg-elevated`＋深字），非選中 hover 半透明灰；**別用藍底**。內容排版由 slot 自理。
+- **`ListPanel`**（2026-07-15）：master-detail **左欄清單殼**（群組頁/選項頁用，CRM 同款頁沿用）。桌面 `lg:sticky top-6`＋`max-h calc(100vh-8rem)` 清單自己捲（不再整頁無限長）；手機不 sticky、清單 max-h 50vh；`filterable` 開頂部過濾框（過濾邏輯由頁面自持，v-model:filter）；px-3 py-2、項目間 space-y-1。量大靠搜尋不靠捲；幾百筆以上才考慮虛擬捲動。
 - **`TableSortButton`**：深色表頭的可排序表頭鈕。補 `font-semibold`——**button theme 全域 `font-normal`（中英字重一致）會蓋掉 `table` theme 的 `th` 字重**，可排序欄不補會比純文字表頭細一截。
 
 ### 11.2 RWD 範式
