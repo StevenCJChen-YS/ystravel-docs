@@ -97,15 +97,20 @@
 ### RolePermissionsPage（新頁）
 - Route `/admin/roles/:id/permissions`，meta permission `AUTH.ROLE.MANAGE`；`UBreadcrumb` 角色管理 → {角色名}
 - `Promise.all([fetchRole, fetchPermissions])`；頁首卡＝角色名＋code＋badges＋「已選 n/共 m」＋儲存鈕（dirty 才亮）；`<sm` sticky 底部儲存列
+- **搜尋＋批次列**（07-14 補）：搜尋只過濾「顯示」（已勾但被濾掉仍在 selected、儲存送完整集合）；「全部選取/全部清除」只作用在目前顯示的權限（比照 Imasphere）
 - 範圍過濾：指定系統角色只給該系統權限；平台共用給全部
 - 超管：info alert「系統寫死全權，僅供檢視」＋matrix readonly＋無儲存鈕
 - **dirty＋離開防護**（portal 首見範式）：`onBeforeRouteLeave`＋`useConfirm`；`beforeunload` mount 掛/unmount 拆
 - 儲存 toast 標明「下次 token 更新後生效（≤15 分）」
 
 ### PermissionMatrix（新共用元件，`src/entities/permission/`）
-- Props：`permissions`、`selected`（`v-model:selected`）、`readonly?`、`moduleLabels?`
-- appCode→module 分組；模組卡 `grid lg:grid-cols-2`＋子項 `min-w-0`（foundation §11 雷）；卡頭全選/清除；卡身 `UCheckbox` 一權限一列（名稱＋`PermissionCode`＋說明）；`<sm` 單欄
+- Props：`permissions`、`selected`（`v-model:selected`）、`readonly?`、`resourceLabels?`
+- **appCode→資源(resource) 分組**（07-14 拍板，原按 module——AUTH 全掛 admin 模組會擠一卡）；資源卡 `grid lg:grid-cols-2 2xl:grid-cols-3`＋子項 `min-w-0`（foundation §11 雷）；卡頭＝資源中文名＋已選計數＋全選/清除；卡身 `UCheckbox` 一權限一列（**中文動作短名**（檢視/管理/入職作業…）＋code mono 小字＋description）；`<sm` 單欄
+- 資源/動作中文對照表放元件內（`DEFAULT_RESOURCE_LABELS`/`ACTION_LABELS`），catalog 加新資源時記得補中文（沒對到顯示原值）
 - 遵守 foundation §10/§11（字重、toast/confirm、深表頭風格慣例）
+
+### 權限模型定調（07-14 拍板）
+- **維持粗粒度混合**：每資源預設「檢視(read)／管理(manage)」兩檔（USER 另有 onboard），真有「只能改不能刪」需求的資源才在 catalog 加 create/update/delete 顆粒（UI 的 ACTION_LABELS 已預留），**不做全面 CRUD 細分**（權限數×4、端點逐支重對、勾選負擔重）。與 Imasphere／GitHub 同模式。
 
 ## 10. Seed 修正（決策 8）
 
