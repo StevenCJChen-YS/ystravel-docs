@@ -207,4 +207,28 @@
   3. 建立/編輯 modal **不放** order 數字欄，新增自動排到最後。
 - **數字給人看一律 1-based（`order+1`）**，0-based 只留程式內。
 - **後端**：reorder 端點收「排好的 id 陣列」→交易重編 0,1,2…＋audit。
+- **UI＝modal**（2026-07-14 二次改版）：工具列「調整順序」鈕開 `OrderManager` **modal**（比照建立/編輯 modal 慣例，不再整頁切換）；清單窄單欄（`max-w-2xl`）、可捲、序號 1-based 藍底小徽章；清單空時顯示空狀態。⚠️`useSortable` 要加 `watchElement: true`（modal body 晚掛載，預設只 mount 初始化一次會撲空、拖曳失效）。
 - **未做／未來**：多層分類樹（同原則延伸樹狀拖曳）；持久「自動/手動 sort mode」（現以「依名稱排序」一鍵 bake 字母序代替，Shopify/Salesforce 式）。
+
+---
+
+## 11. 共用 UI 元件庫與 RWD 範式（2026-07-14，AuthPortal 管理中心巡檢定案）
+
+「看到會重複就當下抽」的落地成果（`src/shared/ui`）；CRM／EIP 沿用。
+
+### 11.1 新增共用元件
+- **`ToolbarButton`**：工具列／頁首動作鈕（新增 XX、調整順序…）。桌面 icon＋文字，**`<sm` 收成 40×40 icon-only 正方**——用「文字 `max-sm:hidden` 藏＋`aria-label`/`title` 保留全文」的正法，**不要**用 `max-md:size-10` 硬縮（文字還在會擠爆）。可換 `color`/`variant`（新增＝primary solid、調整順序＝neutral outline）。
+- **`EmptyState`**：空狀態。`UEmpty variant="naked"`＋`border-dashed`（官方 outline/subtle 的框是 `ring`＝box-shadow，**做不了虛線**，naked＋class 疊）。`size` 對應 UEmpty 檔位：`sm`＝標題14/說明12/icon 縮小（窄欄用，內距鎖 24px 不隨螢幕長到 32），`md`＝大區塊。
+- **`FilterModal`**：篩選收合殼（原 `FilterDrawer`，因 vaul 抽屜開啟殘留 `translate3d`→Windows 顯示縮放下文字糊，改用 `UModal`，**不動官方設定/不加全域 !important**）。「篩選 (N)」鈕＋modal＋footer 重置/取消/套用。兩模式：預設（鈕只 `<md` 出現，桌面平鋪下拉）、`alwaysVisible`（鈕常駐，搜尋為主頁用）。草稿流程由頁面持有：`@open` 拷真值進草稿、`@apply` 寫回真值。
+- **`ListItemButton`**：左側清單項（群組清單／選項類別清單同款）。選中＝側欄同款灰 pill（`bg-elevated`＋深字），非選中 hover 半透明灰；**別用藍底**。內容排版由 slot 自理。
+- **`TableSortButton`**：深色表頭的可排序表頭鈕。補 `font-semibold`——**button theme 全域 `font-normal`（中英字重一致）會蓋掉 `table` theme 的 `th` 字重**，可排序欄不補會比純文字表頭細一截。
+
+### 11.2 RWD 範式
+- **列表頁篩選收合**：即時篩選頁（使用者/角色）＝桌面平鋪下拉、`<md` 收 `FilterModal`（草稿、套用才寫回真值）；**搜尋為主＋低頻條件頁**（稽核）＝左模糊搜尋（debounce 即時查）＋右上 `FilterModal alwaysVisible`（動作/日期收 modal、套用才查），**無查詢/清除鈕**。這是「資料量大、欄位多」頁的標準範式（CRM 客戶/訂單沿用）。
+- **`DataToolbar` inline 模式**：動作少的頁（組織/部門）小螢幕也單列（搜尋 `flex-1`＋動作貼右）；動作多（含篩選下拉）維持堆疊。
+- **側欄自動收合**：`AppShell` 監看 `xl`(1280)，`<xl` 收 icon rail、`≥xl` 展開（仍可手動 toggle，跨斷點回預設）。
+- **RWD 藏欄**：走 `useResponsiveColumns`（別逐欄寫死 `hidden md:table-cell`），搭 `ColumnVisibilityMenu` 可手動加回；同一份 `columnVisibility` 綁 UTable。
+
+### 11.3 踩坑
+- **grid 子項橫向溢出**：`lg:grid-cols-[Npx_minmax(0,1fr)]` 這類 grid 在 `<lg` 塌成單欄時，子項預設 `min-width:auto`，內含表格等寬內容會撐破欄寬造成整頁橫向捲動 → **grid 子項（section）補 `min-w-0`**。
+- **modal 縮窄**：欄位少的建立/編輯 modal 用 `width-class="sm:max-w-md"`（別用預設 512 太寬）。
