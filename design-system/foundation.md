@@ -5,7 +5,7 @@
 | 文件性質 | 跨系統設計系統來源（source of truth） |
 | 適用範圍 | Ystravel-AuthPortal、Ystravel-CRM-Frontend、未來 EIP 前端 |
 | 技術 | NuxtUI v4 + Tailwind CSS v4 |
-| 狀態 | 草稿（2026-07-08；2026-07-14 對齊：主色 **Auth=Teal**、語意色明暗色階 light-600/dark-400、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
+| 狀態 | 草稿（2026-07-08；2026-07-14 對齊：主色 **Auth=Teal**、語意色明暗色階 light 深一階(primary/warning 自訂 550、其餘 600)/dark 400、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
 | 前身 | 抽自 `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md`（2026-07-06，已相當成熟），升級為全公司共用版並加上「各系統主題層」 |
 
 ---
@@ -151,8 +151,10 @@
 - 顏色偏好共用 storage key：`ystravel.platform.color-mode`（Auth/CRM/EIP 共用）。
 - 新頁面優先用 semantic class + NuxtUI color/variant，不硬寫 `bg-white`/`text-slate-*`。
 - **語意色明暗色階策略（2026-07-14 定案，AuthPortal 落地）**：同一語意色在明暗用**不同階**（Radix/Material 式）——白底對比偏低要**深一階**、深底要**亮一階**才跳得出來。
-  - **語意變數 `--ui-*`（primary/secondary/success/warning/info）：light = 600、dark = 400**（Nuxt UI 預設 light=500 在白底偏淡，Steven 推深到 600）。error(rose) 未列入、維持預設。實作＝`main.css` 未分層覆寫 `:root`（light 指 -600）＋ `.dark`（補回 -400，抵銷未分層洩漏）。影響：`text-primary`／subtle・soft 標籤／focus ring／**outline 主鈕**。
-  - **例外（走固定色階、明暗一致，不隨上面變）**：**solid 主鈕**＝`bg-primary-600` hover/active 700/800（明暗都 600）；**switch checked**＝`bg-primary-500`（明暗都 500，比 solid 鈕淺一階）。固定色階 `-600`/`-500` 明暗同值＝明暗一致，寫在 `vite.config` button／switch theme。
+  - **語意變數 `--ui-*` light 深一階、dark = 400**（Nuxt UI 預設 light=500 白底偏淡）。實作＝`main.css` 未分層覆寫 `:root`（light）＋ `.dark`（補回 -400，抵銷未分層洩漏）。影響：`text-primary`／subtle・soft 標籤／focus ring／**outline 主鈕**。
+    - **primary(teal)／warning(amber)：light = 自訂 550 半階**（500 偏亮、600 偏暗，取 oklch 中間值）；success(emerald)／secondary／info(sky)：light = 600；error(rose) 維持預設。
+    - **自訂 550 半階做法**（Nuxt UI `--ui-color-*` 別名只內建 50–950）：`@theme` 定 `--color-teal-550`/`--color-amber-550`（oklch 插值）→ 接 `--color-primary-550`/`--color-warning-550`（讓 `bg-primary-550` utility 生成）＋ `:root` 補 `--ui-color-primary-550`/`--ui-color-warning-550`（讓 `--ui-primary` 可引用）。**兩套別名都要接**。
+  - **例外（走固定色階、明暗一致，不隨上面變）**：**solid 主鈕**＝`bg-primary-550` hover/active 600/700（明暗都 550）；**switch checked**＝`bg-primary-500`（明暗都 500）。固定色階明暗同值＝明暗一致，寫在 `vite.config` button／switch theme。
   - **表格內資訊標籤用 `info`（sky）不用品牌 `primary`**：主色改 teal 後，表格裡的「系統／appCode」等資訊 tag 若用 primary 會變品牌色搶眼 → 改 `color="info"`（藍＝資訊語意）。品牌 primary 留給主要動作。
 - **dark mode 浮層規則（2026-07-13 定案）**：dark 下陰影幾乎看不見 → 上層元素（modal／popover／各下拉 content／表格卡）改用 **`ring-1 dark:ring-white/25`（hairline）＋深色明度分層** 製造「在上層」感，**不靠 `shadow`**。明度階梯：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。switch thumb dark 白（`dark:bg-white`）。已抽到各 repo `vite.config` 的 modal／select／selectMenu／dropdownMenu theme 的 content slot，新元件自動套用。
 
