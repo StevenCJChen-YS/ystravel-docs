@@ -5,7 +5,7 @@
 | 文件性質 | 跨系統設計系統來源（source of truth） |
 | 適用範圍 | Ystravel-AuthPortal、Ystravel-CRM-Frontend、未來 EIP 前端 |
 | 技術 | NuxtUI v4 + Tailwind CSS v4 |
-| 狀態 | 草稿（2026-07-08；2026-07-12 對齊 07-11 拍板：主色 Auth=Blue、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
+| 狀態 | 草稿（2026-07-08；2026-07-14 對齊：主色 **Auth=Teal**、語意色明暗色階 light-600/dark-400、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
 | 前身 | 抽自 `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md`（2026-07-06，已相當成熟），升級為全公司共用版並加上「各系統主題層」 |
 
 ---
@@ -28,11 +28,13 @@
 
 | 系統 | primary 主色 |
 |---|---|
-| **AuthPortal** | **Blue** |
-| **EIP**（未來） | **Teal** |
+| **AuthPortal** | **Teal** |
+| **EIP**（未來） | 待定（原暫定 Teal，與 Auth 撞色，另議） |
 | **CRM** | **Violet** |
 
-> 2026-07-12 修訂：回到 2026-07-08 原定案 **Auth=Blue / EIP=Teal / CRM=Violet**。07-10 曾因 AuthPortal 實作全採 teal 而「現實勝出」翻成 Auth=Teal，**07-11 Steven 再拍板翻回 Auth=Blue**（後台已實作 `b70a73c`）。⚠️ 登入頁 terminal 調色盤與 AuthService 信件尾板目前仍是 teal，屬待跟進的收尾工作（登入頁＝平台門面，色彩收斂另議）。
+> **2026-07-14 定案：Auth = Teal**（Steven 拍板，PR #23）。理由：登入頁 terminal 調色盤與 AuthService 信件模板本就是 teal，App 主色改 teal 反而全平台一致（不再有「後台藍、門面 teal」的分裂）。
+> 沿革：07-08 原定 Auth=Blue → 07-10 現實勝出翻 Teal → 07-11 翻回 Blue → **07-14 再定回 Teal**（這次連信件/登入頁一起收斂，不再是暫時狀態）。
+> ⚠️ EIP 原暫定 Teal 會與 Auth 撞色，未來實作前再定；CRM=Violet 不變。**各系統主色後續各自定，改一行 `vite.config` `primary` 別名即可**（全站走 semantic token）。
 
 - 三色在色環上大致等距，最好辨識「我在哪個系統」。
 - 三個主色都**避開了語意色**（見 §3），不會跟成功/警告/資訊訊息撞色。
@@ -88,7 +90,7 @@
 | error | rose |
 | neutral | gray（light）／zinc（dark）— 見 §2.1 |
 
-> ⚠️ 各系統的 `primary` 主色（Blue/Teal/Violet）**不得使用上面任何一個**，否則主色會跟語意訊息撞色。
+> ⚠️ 各系統的 `primary` 主色（Auth=Teal／CRM=Violet／EIP 待定）**不得使用上面任何一個語意色**，否則主色會跟語意訊息撞色。
 
 ### 3.2 中性底色分層（不只白底一層，2026-07-10 修訂）
 
@@ -148,7 +150,10 @@
 - **兩個模式一開始就一起做**，禁止新增只支援 light mode 的硬寫色。
 - 顏色偏好共用 storage key：`ystravel.platform.color-mode`（Auth/CRM/EIP 共用）。
 - 新頁面優先用 semantic class + NuxtUI color/variant，不硬寫 `bg-white`/`text-slate-*`。
-- **主色的 dark mode**：主色用中間調（如 blue/teal/violet 的 500/600），深色模式自動對應到淺一階（如 400），明暗兩模式對比都足夠——這也是當初不選 sky 當主色的原因（sky 太淺，暗色模式會刺眼/糊）。
+- **語意色明暗色階策略（2026-07-14 定案，AuthPortal 落地）**：同一語意色在明暗用**不同階**（Radix/Material 式）——白底對比偏低要**深一階**、深底要**亮一階**才跳得出來。
+  - **語意變數 `--ui-*`（primary/secondary/success/warning/info）：light = 600、dark = 400**（Nuxt UI 預設 light=500 在白底偏淡，Steven 推深到 600）。error(rose) 未列入、維持預設。實作＝`main.css` 未分層覆寫 `:root`（light 指 -600）＋ `.dark`（補回 -400，抵銷未分層洩漏）。影響：`text-primary`／subtle・soft 標籤／focus ring／**outline 主鈕**。
+  - **例外（走固定色階、明暗一致，不隨上面變）**：**solid 主鈕**＝`bg-primary-600` hover/active 700/800（明暗都 600）；**switch checked**＝`bg-primary-500`（明暗都 500，比 solid 鈕淺一階）。固定色階 `-600`/`-500` 明暗同值＝明暗一致，寫在 `vite.config` button／switch theme。
+  - **表格內資訊標籤用 `info`（sky）不用品牌 `primary`**：主色改 teal 後，表格裡的「系統／appCode」等資訊 tag 若用 primary 會變品牌色搶眼 → 改 `color="info"`（藍＝資訊語意）。品牌 primary 留給主要動作。
 - **dark mode 浮層規則（2026-07-13 定案）**：dark 下陰影幾乎看不見 → 上層元素（modal／popover／各下拉 content／表格卡）改用 **`ring-1 dark:ring-white/25`（hairline）＋深色明度分層** 製造「在上層」感，**不靠 `shadow`**。明度階梯：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。switch thumb dark 白（`dark:bg-white`）。已抽到各 repo `vite.config` 的 modal／select／selectMenu／dropdownMenu theme 的 content slot，新元件自動套用。
 
 ---
@@ -169,7 +174,7 @@
 | 頁面局部 override | `.vue` 的 `size` / `ui` prop / `class` |
 
 - **共用底層**（字體、語意色、密度、按鈕階層…）三個 repo 應保持一致。
-- **主題層**只有 `primary` 每個 repo 不同（Auth=Blue / CRM=Violet / EIP=Teal）。
+- **主題層**只有 `primary` 每個 repo 不同（Auth=Teal / CRM=Violet / EIP 待定）。
 - 目前**不改任何現有 code**；本文件先作為規範，實際套用在各系統做 UI 時逐步落實。
 
 ---
@@ -184,7 +189,7 @@
 ---
 
 ## 9. 待決策 / 待辦
-- [ ] 三系統 primary 的**確切色階**（例如 blue-600 或 blue-500 當亮色主色）——做 UI 時實測 light/dark 對比後定。
+- [x] ~~三系統 primary 的確切色階~~ → Auth 定案：語意 light-600/dark-400、solid 鈕固定 600、switch 500（見 §5）。CRM/EIP 沿用同策略、各自定 primary 家族。
 - [ ] 是否需要把 Base token 做成一個共用 npm 套件 / 共用 CSS 檔，讓三 repo 真正共用而非各自複製（現階段先文件對齊，未來重複痛了再抽套件）。
 
 ---
@@ -219,12 +224,14 @@
 ### 11.1 新增共用元件
 - **`ToolbarButton`**：工具列／頁首動作鈕（新增 XX、調整順序…）。桌面 icon＋文字，**`<sm` 收成 40×40 icon-only 正方**——用「文字 `max-sm:hidden` 藏＋`aria-label`/`title` 保留全文」的正法，**不要**用 `max-md:size-10` 硬縮（文字還在會擠爆）。可換 `color`/`variant`（新增＝primary solid、調整順序＝neutral outline）。
 - **`EmptyState`**：空狀態。`UEmpty variant="naked"`＋`border-dashed`（官方 outline/subtle 的框是 `ring`＝box-shadow，**做不了虛線**，naked＋class 疊）。`size` 對應 UEmpty 檔位：`sm`＝標題14/說明12/icon 縮小（窄欄用，內距鎖 24px 不隨螢幕長到 32），`md`＝大區塊。
-- **`FilterModal`**：篩選收合殼（原 `FilterDrawer`，因 vaul 抽屜開啟殘留 `translate3d`→Windows 顯示縮放下文字糊，改用 `UModal`，**不動官方設定/不加全域 !important**）。「篩選 (N)」鈕＋modal＋footer 重置/取消/套用。兩模式：預設（鈕只 `<md` 出現，桌面平鋪下拉）、`alwaysVisible`（鈕常駐，搜尋為主頁用）。草稿流程由頁面持有：`@open` 拷真值進草稿、`@apply` 寫回真值。
+- **`FilterPanel`**（曾叫 `FilterDrawer`→`FilterModal`）：篩選收合殼，**RWD 分流：`<sm` 底部 `UDrawer`／`≥sm` `UModal`**（`useBreakpoints` 以 sm 為界）。「篩選 (N)」鈕＋footer 重置/取消/套用。兩種鈕模式：預設（鈕只 `<md` 出現，桌面平鋪下拉）、`alwaysVisible`（鈕常駐，搜尋為主頁用）。草稿流程由頁面持有：`@open` 拷真值進草稿、`@apply` 寫回真值。
+  - ⚠️ **vaul（UDrawer）踩坑**：抽屜開啟殘留 `translate3d`→帶 transform 自成 GPU 合成層，**Windows 顯示縮放 125/150% 下文字糊**。但那只是「桌面 devtools 模擬手機」的假象、**真機正常**，故 `<sm` 用抽屜可接受。（曾一度全改 modal 避開，Steven 後來要手機回抽屜。別再為此加 `transform:none` 全域 hack。）
+  - **dark 浮起 ring**：UDrawer 預設 `ring-default` 在 dark 看不見 → content 加 `dark:ring-white/25`（同 §5 浮層規則）。modal 端由全域 modal theme 自帶。
 - **`ListItemButton`**：左側清單項（群組清單／選項類別清單同款）。選中＝側欄同款灰 pill（`bg-elevated`＋深字），非選中 hover 半透明灰；**別用藍底**。內容排版由 slot 自理。
 - **`TableSortButton`**：深色表頭的可排序表頭鈕。補 `font-semibold`——**button theme 全域 `font-normal`（中英字重一致）會蓋掉 `table` theme 的 `th` 字重**，可排序欄不補會比純文字表頭細一截。
 
 ### 11.2 RWD 範式
-- **列表頁篩選收合**：即時篩選頁（使用者/角色）＝桌面平鋪下拉、`<md` 收 `FilterModal`（草稿、套用才寫回真值）；**搜尋為主＋低頻條件頁**（稽核）＝左模糊搜尋（debounce 即時查）＋右上 `FilterModal alwaysVisible`（動作/日期收 modal、套用才查），**無查詢/清除鈕**。這是「資料量大、欄位多」頁的標準範式（CRM 客戶/訂單沿用）。
+- **列表頁篩選收合**：即時篩選頁（使用者/角色）＝桌面平鋪下拉、`<md` 收 `FilterPanel`（草稿、套用才寫回真值）；**搜尋為主＋低頻條件頁**（稽核）＝左模糊搜尋（debounce 即時查）＋右上 `FilterPanel alwaysVisible`（動作/日期收面板、套用才查），**無查詢/清除鈕**。這是「資料量大、欄位多」頁的標準範式（CRM 客戶/訂單沿用）。面板本身 `<sm` 抽屜／`≥sm` modal（見 §11.1）。
 - **`DataToolbar` inline 模式**：動作少的頁（組織/部門）小螢幕也單列（搜尋 `flex-1`＋動作貼右）；動作多（含篩選下拉）維持堆疊。
 - **側欄自動收合**：`AppShell` 監看 `xl`(1280)，`<xl` 收 icon rail、`≥xl` 展開（仍可手動 toggle，跨斷點回預設）。
 - **RWD 藏欄**：走 `useResponsiveColumns`（別逐欄寫死 `hidden md:table-cell`），搭 `ColumnVisibilityMenu` 可手動加回；同一份 `columnVisibility` 綁 UTable。
