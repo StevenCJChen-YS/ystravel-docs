@@ -6,6 +6,12 @@
 | 狀態 | 已確認（2026-07-14） |
 | 建立日期 | 2026-07-14 |
 
+> **2026-07-15 角色體系收斂（本文件仍為 Phase 1 設計原貌，收斂差異看這段＋example-mapping 決策表）**：
+> ①超管代碼 `AUTH_SUPER_ADMIN` → `SUPER_ADMIN`、名稱「Auth 超級管理者」→「超級管理者」（seed 一次性改名）。
+> ②系統角色只剩 SUPER_ADMIN；AUTH_ADMIN/AUTH_HR/CRM_* 降級一般角色（起手範本，可改可刪）。
+> ③「管理者只能由管理者處置」改看「有效角色是否授予 `AUTH.USER.MANAGE`」（前後端同邏輯），不再寫死角色代碼清單。
+> ④UI 用詞「平台共用」→「全系統」。
+
 ## 0. 白話摘要
 
 後端擴充既有 `src/roles/roles.controller.ts`（不開新模組）：加 5 支端點（查單筆/建/改/刪/整組換權限），沿用 repo 慣例（plain type request＋手動驗證＋直接注入 Prisma＋controller 內 audit helper）。前端照「使用者頁黃金範式」把角色頁改成 CRUD，權限設定是**新獨立頁**＋新共用元件 `PermissionMatrix`（Phase 2 使用者權限微調可重用）。無 migration、無新套件。
