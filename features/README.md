@@ -17,4 +17,5 @@ docs/features/<feature-slug>/
 
 - [auth-foundation](./auth-foundation/architecture-decisions.md) — SSO/Auth 地基決策；目前主線為 native auth v2。
 - [auth-native-login-v2](./auth-native-login-v2/README.md) — 當前 Phase 1a：AuthService 主導登入與權限，AuthPortal 回到原登入頁體驗。
+- [auth-role-management](./auth-role-management/prd.md) — 角色 CRUD＋權限分配整頁（Phase 1 開發中）；Phase 2＝單一使用者權限微調。
 - [auth-logto-login](./auth-logto-login/prd.md) — Logto 實驗紀錄；保留供追溯，不是目前主線。
