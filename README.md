@@ -1,6 +1,28 @@
 # Docs Index
 
-這個 `docs/` 已完成第一階段整理：先依文件角色分資料夾，讓正式架構、操作資訊、參考資料、流程文件、分析稿與歷程輸出分開。
+> 🧭 **先看這張「主題導覽」再搜尋。** 想知道某主題該開哪個檔，直接查表命中，不要全域搜尋整個 `docs/`。
+
+## 主題導覽（Topic → 權威檔案）
+
+| 我想知道… | 直接開這個 |
+|---|---|
+| **用什麼技術 / 技術棧 / 框架** | [architecture/CRM_AUTH_SERVICE_SD.md](./architecture/CRM_AUTH_SERVICE_SD.md)（開頭「建議技術」表） |
+| **資料庫 / MySQL / PostgreSQL / 換 DB / 資料遷移** | [architecture/DATABASE.md](./architecture/DATABASE.md) |
+| **開發流程 / 要走哪些步驟 / PRD·SA·SD·BDD** | [development-process/00-overview.md](./development-process/00-overview.md) |
+| **某個功能的規格文件** | [features/](./features/README.md) → 一個功能一個資料夾 |
+| **UI / 設計系統 / 顏色 / 元件 / RWD / 深色模式** | [design-system/foundation.md](./design-system/foundation.md) |
+| **Nuxt UI 元件尺寸客製** | [reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md](./reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md) |
+| **權限模型 / 角色體系** | [architecture/CRM_AUTH_SERVICE_SA.md](./architecture/CRM_AUTH_SERVICE_SA.md) ＋ [features/auth-role-management/](./features/auth-role-management/prd.md) |
+| **登入 / auth 現況** | [features/auth-native-login-v2/README.md](./features/auth-native-login-v2/README.md) |
+| **資安 / ISO 27001** | [process/SECURITY_AND_ISO27001_BASELINE.md](./process/SECURITY_AND_ISO27001_BASELINE.md) |
+| **密碼政策** | [process/PASSWORD_POLICY.md](./process/PASSWORD_POLICY.md) |
+| **客戶匯入 / 資料清洗 / 產業分類** | [features/crm-import-cleaning/](./features/crm-import-cleaning/prd.md) ＋ [analysis/](./analysis/CUSTOMER_EXCEL_FIRST_PASS_ANALYSIS.md) |
+
+> 表裡沒有的主題，再往下看「Current Structure」按資料夾找；找到新的常用主題請補進這張表。
+
+---
+
+`docs/` 依「文件角色」分資料夾：正式架構、操作資訊、參考資料、流程文件、分析稿與封存歷程各自分開。
 
 ## Development Process（從這裡開始）
 
@@ -83,15 +105,4 @@ docs/
 - `reference/` 放來源資料與遷移對照。
 - `operations/` 放會過期的環境、進度、啟動資訊。
 - `archive/` 放 handoff、草稿、舊資料，不當成 source of truth。
-
-## Known Issues
-
-- 多數 `.docx` 看起來是同一批由 `python-docx` 輸出的 artifact，不像原始編輯檔。
-- 部分中文 `.docx` 有亂碼風險，暫時不建議把它們當唯一主文件來源。
-- 目前仍有幾份核心內容只有 `.docx`，後續建議補回可維護的 Markdown source。
-
-## Suggested Next Cleanup
-
-1. 把核心 `.docx` 補回 Markdown 原始版。
-2. 為 `architecture/` 和 `reference/` 文件補狀態欄位與互相引用。
-3. 視需要把 `.docx` 明確降為 export，而不是主編輯格式。
+- 標 `.docx` 的檔案是舊 export（多為 `python-docx` 產出、部分中文有亂碼風險），僅供追溯，別當唯一主文件來源。
