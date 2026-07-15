@@ -14,6 +14,7 @@
 | **Nuxt UI 元件尺寸客製** | [reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md](./reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md) |
 | **權限模型 / 角色體系** | [architecture/CRM_AUTH_SERVICE_SA.md](./architecture/CRM_AUTH_SERVICE_SA.md) ＋ [features/auth-role-management/](./features/auth-role-management/prd.md) |
 | **登入 / auth 現況** | [features/auth-native-login-v2/README.md](./features/auth-native-login-v2/README.md) |
+| **帳號中心 / 個人資料頁 / 設定頁 / 大頭貼 / 名片背景 / 自助改密碼 / 通用偏好** | [features/auth-account-center/prd.md](./features/auth-account-center/prd.md) |
 | **資安 / ISO 27001** | [process/SECURITY_AND_ISO27001_BASELINE.md](./process/SECURITY_AND_ISO27001_BASELINE.md) |
 | **密碼政策** | [process/PASSWORD_POLICY.md](./process/PASSWORD_POLICY.md) |
 | **客戶匯入 / 資料清洗 / 產業分類** | [features/crm-import-cleaning/](./features/crm-import-cleaning/prd.md) ＋ [analysis/](./analysis/CUSTOMER_EXCEL_FIRST_PASS_ANALYSIS.md) |
