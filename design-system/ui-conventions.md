@@ -2,7 +2,7 @@
 
 > **定位**：本檔承接原本記在 AI 分身記憶（my-agent `MEMORY.md`）裡的 UI 範式、拍板決策與踩坑雷點——2026-07-16 知識分層整理時遷移至此。
 > **與 [foundation.md](./foundation.md) 的分工**：foundation＝設計系統規範本體（token、色階、元件規格）；本檔＝**範式決策的時間線、理由、與實作層的血淚雷點**。兩檔衝突時以最新拍板為準並回頭更新。
-> ⚠️ 檔內 `src/shared/ui` 等路徑為 AuthPortal 現行路徑；Phase 1 整併入 ystravel-platform 後為 `apps/portal/src/...`（屆時批次更新）。
+> 📁 路徑基準（2026-07-16 Phase 1 整併完成後更新）：本檔 `src/shared/ui`、`src/shared/composables` 等路徑對應平台的 **`apps/portal/src/...`**（`ystravel-platform`）；早期以 `AuthPortal` 為主詞的敘述皆指同一份已遷入 platform 的程式碼。
 
 ---
 
