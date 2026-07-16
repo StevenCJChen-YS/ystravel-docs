@@ -6,8 +6,9 @@
 
 | 我想知道… | 直接開這個 |
 |---|---|
-| **用什麼技術 / 技術棧 / 框架** | [architecture/CRM_AUTH_SERVICE_SD.md](./architecture/CRM_AUTH_SERVICE_SD.md)（開頭「建議技術」表） |
-| **資料庫 / MySQL / PostgreSQL / 換 DB / 資料遷移** | [architecture/DATABASE.md](./architecture/DATABASE.md) |
+| **平台架構 / monorepo / 模組化單體 / 為什麼不拆多系統 / SSO 去留 / 科威整合 / 路線圖** | [architecture/ADR-2026-07-16-platform-modular-monolith.md](./architecture/ADR-2026-07-16-platform-modular-monolith.md)（2026-07-16 定案；平台實作細則見未來 ystravel-platform repo 根的 CLAUDE.md） |
+| **用什麼技術 / 技術棧 / 框架** | [architecture/ADR-2026-07-16-platform-modular-monolith.md](./architecture/ADR-2026-07-16-platform-modular-monolith.md) §2/§5/§7（NestJS 11＋Vue3＋NuxtUI＋Prisma＋PostgreSQL）；舊表：[architecture/CRM_AUTH_SERVICE_SD.md](./architecture/CRM_AUTH_SERVICE_SD.md) |
+| **資料庫 / PostgreSQL / 換 DB / 資料遷移** | 現行決策：[ADR-2026-07-16 §5](./architecture/ADR-2026-07-16-platform-modular-monolith.md)（**PostgreSQL**）；遷移 checklist 思路：[architecture/DATABASE.md](./architecture/DATABASE.md)（已標 superseded） |
 | **開發流程 / 要走哪些步驟 / PRD·SA·SD·BDD** | [development-process/00-overview.md](./development-process/00-overview.md) |
 | **某個功能的規格文件** | [features/](./features/README.md) → 一個功能一個資料夾 |
 | **UI / 設計系統 / 顏色 / 元件 / RWD / 深色模式** | [design-system/foundation.md](./design-system/foundation.md) |
@@ -55,6 +56,7 @@ docs/
 
 長期有效、作為團隊設計共識的文件：
 
+- [architecture/ADR-2026-07-16-platform-modular-monolith.md](./architecture/ADR-2026-07-16-platform-modular-monolith.md) — **現行架構定案**：ystravel-platform 單一 monorepo 模組化單體
 - [architecture/CRM_AUTH_SERVICE_SA.md](./architecture/CRM_AUTH_SERVICE_SA.md)
 - [architecture/CRM_AUTH_SERVICE_SD.md](./architecture/CRM_AUTH_SERVICE_SD.md)
 - `architecture/YSTRAVEL_AUTH_PERMISSION_MODEL.md.docx`
