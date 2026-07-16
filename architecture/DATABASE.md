@@ -1,7 +1,7 @@
 # 資料庫策略與遷移指南（Database Strategy & Migration）
 
-> **這是「資料庫用什麼、以後怎麼換」的權威文件。** 問到 DB 選型、MySQL/PostgreSQL、換 DB、資料搬遷，看這份就對了。
-> 最後更新：2026-07-15
+> ⚠️ **SUPERSEDED（2026-07-16）**：本檔的 MySQL 決策（§1–2）已被 [ADR-2026-07-16-platform-modular-monolith.md](./ADR-2026-07-16-platform-modular-monolith.md) §5 取代——**現行決策＝PostgreSQL（單一資料庫、依模組分 schema）**，隨 ystravel-platform 架構轉向、趁開發期無正式資料一併轉換。本檔保留供追溯，其「schema≠data」遷移 checklist（§3 起）思路仍可參考。
+> 最後更新：2026-07-16（標 superseded）；原內容定稿 2026-07-15
 
 ---
 
