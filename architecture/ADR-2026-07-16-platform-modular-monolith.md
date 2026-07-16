@@ -36,7 +36,7 @@ apps/backend/src/          # NestJS 11 模組化單體
 ├── appraisal/             # 考核
 ├── crm/                   # 客戶、聯繫紀錄、標籤分眾
 ├── marketing/  it/
-└── integration/kewei/     # 科威 Excel 匯入管線（防腐層）
+└── integration/cowell/     # 科威 Excel 匯入管線（防腐層）
 apps/portal/src/           # Vue3 + NuxtUI 單一入口網站（shared/ui 包裝層 + modules/*）
 packages/shared/           # 前後端共用型別、權限代碼常數
 ```
@@ -70,7 +70,7 @@ packages/shared/           # 前後端共用型別、權限代碼常數
 
 - 科威＝外包系統（會計/財務/訂單/官網後台），旅行社業界通用，**持續使用、不在重建範圍**。
 - **科威沒有 API**：資料靠人工下載 Excel 再匯入。
-- `integration/kewei` 防腐層：上傳 Excel → exceljs 解析 → staging 表（原始列＋批次 ID）→ 驗證正規化 → 自然鍵比對（正規化電話＋email＋證號）→ **upsert（禁裸 insert，冪等）** → 匯入報告；部分失敗不整批死、欄位對不上明確報錯、寫 AuditLog。科威資料格式只准出現在此層內部。
+- `integration/cowell` 防腐層：上傳 Excel → exceljs 解析 → staging 表（原始列＋批次 ID）→ 驗證正規化 → 自然鍵比對（正規化電話＋email＋證號）→ **upsert（禁裸 insert，冪等）** → 匯入報告；部分失敗不整批死、欄位對不上明確報錯、寫 AuditLog。科威資料格式只准出現在此層內部。
 - 既有經驗直接適用：CRM 匯入 10 萬列曾把一次性讀入的實作撐爆記憶體，已驗證解法＝exceljs streaming 逐列＋每千列分批寫入（參考碼在舊 `Ystravel-CRM-Backend`）。
 
 ## 7. 部署與 CI/CD
@@ -92,7 +92,7 @@ Docker Compose 於單台 VPS（遠振）、nginx 同網域反代（`/` 前端、
 | 對象 | 處置 |
 |---|---|
 | Ystravel-AuthService / AuthPortal | Phase 1 整併入 platform 後 GitHub **Archive**（唯讀封存，不刪） |
-| Ystravel-CRM-Backend / Frontend | **已棄用（2026-07-16）**：不搬入；匯入 streaming 邏輯留作 kewei 參考，取完後 Archive |
+| Ystravel-CRM-Backend / Frontend | **已棄用（2026-07-16）**：不搬入；匯入 streaming 邏輯留作 cowell 參考，取完後 Archive |
 | GInternational-*（舊 EIP） | 服役至 Phase 4 退役 |
 | docs repo（本庫） | **保留獨立**：SDLC 流程、設計系統、功能文件的家；platform 的 `docs/` 只放平台專屬 ADR |
 | [DATABASE.md](./DATABASE.md) | 標 superseded 指向本 ADR |
