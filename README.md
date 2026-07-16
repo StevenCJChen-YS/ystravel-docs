@@ -12,6 +12,8 @@
 | **開發流程 / 要走哪些步驟 / PRD·SA·SD·BDD** | [development-process/00-overview.md](./development-process/00-overview.md) |
 | **某個功能的規格文件** | [features/](./features/README.md) → 一個功能一個資料夾 |
 | **UI / 設計系統 / 顏色 / 元件 / RWD / 深色模式** | [design-system/foundation.md](./design-system/foundation.md) |
+| **UI 範式決策時間線 / 實作雷點（篩選、icon-only、表格欄寬、順序管理、帳號中心 IA、字重…）** | [design-system/ui-conventions.md](./design-system/ui-conventions.md)（2026-07-16 自 AI 分身記憶遷移） |
+| **踩坑 / 服務起不來 / 環境排障 / 匯入效能 / Google 登入測試** | [operations/TROUBLESHOOTING.md](./operations/TROUBLESHOOTING.md)（2026-07-16 自 AI 分身記憶遷移） |
 | **Nuxt UI 元件尺寸客製** | [reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md](./reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md) |
 | **權限模型 / 角色體系** | [architecture/CRM_AUTH_SERVICE_SA.md](./architecture/CRM_AUTH_SERVICE_SA.md) ＋ [features/auth-role-management/](./features/auth-role-management/prd.md) |
 | **登入 / auth 現況** | [features/auth-native-login-v2/README.md](./features/auth-native-login-v2/README.md) |
@@ -76,6 +78,7 @@ docs/
 
 會隨專案進度變動、日常查閱頻率高的文件：
 
+- [operations/TROUBLESHOOTING.md](./operations/TROUBLESHOOTING.md) — 專案踩坑與環境排障手冊（新坑直接記這裡）
 - `operations/YSTRAVEL_AUTH_CRM_PROGRESS.md.docx`
 
 ## Process
