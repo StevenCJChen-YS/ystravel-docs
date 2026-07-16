@@ -31,7 +31,7 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 2026-07-08 CRM 匯入第一版「一次讀進記憶體＋一次性 `createMany`」，真實 10 萬多列一上傳 backend 記憶體爆掉崩潰重啟、前端 loading 永遠轉圈（process 死了舊 HTTP 連線變孤兒）。
 **修法**：ExcelJS streaming reader 逐列讀＋每 1000 列 `createMany` 分批寫，不一次持有全部資料，也避免單一 SQL 超過 packet 上限。
 **驗證**：用 exceljs 寫一次性腳本（repo 內、`npx ts-node -T` 直呼 Service 繞過 HTTP/認證）產生真實規模合成資料實測，跑完清掉；別拿正式資料庫當測試場。
-**套用**：涉及匯入/批次/大量寫入的功能，設計時就問「真實資料量多少」並寫進 SD 的效能需求節。**此經驗直接適用 platform 的 `integration/kewei` 科威匯入管線。**
+**套用**：涉及匯入/批次/大量寫入的功能，設計時就問「真實資料量多少」並寫進 SD 的效能需求節。**此經驗直接適用 platform 的 `integration/cowell` 科威匯入管線。**
 
 ### Google 登入測試規則（native login 與 Google login 是兩條路徑）
 `GOOGLE_ALLOWED_TEST_EMAILS` 只影響 Google OAuth 流程，**不影響帳密登入**（「同 email 不在白名單仍可帳密登入」不是 bug）。非 production 若設了測試白名單，Google 帳號選擇器**不要送公司網域 `hd` 提示**，否則私人 Gmail 白名單帳號會在選號畫面被藏起來造成誤判；正式環境維持 `hd` 提示。（2026-07-09）
@@ -61,3 +61,9 @@ monorepo 根被 hoist 上來的 TypeScript 7（來自 `@prisma/client` 的相依
 - Access token＝RS256＋JWKS（`/.well-known/jwks.json` 可離線驗章），`JwtAuthGuard` 只收 RS256——**別再把 HS256 共用密鑰當現行方案**（舊 CRM-Backend 還是 HS256，該 repo 已棄用）。
 - SSO＝自建 OAuth2 式：登入後發一次性 exchange code（綁 appCode+redirectUri、sha256、單次、TTL）換各 app 自己的 token（`auth-exchange.service.ts`）。**沒有 SAML、還不是標準 OIDC provider**（缺 `/authorize`/`id_token`/discovery）；要對外互通才補 OIDC 層。架構轉向後 exchange 機制**保留閒置**（未來第二應用伏筆）。
 - 待辦（backlog）：refresh token selector/jti/hash lookup、2FA、登入鎖定。
+
+### NestJS `deleteOutDir`＋`tsBuildInfoFile` 在 dist 外＝殘缺 dist（MODULE_NOT_FOUND）
+`nest-cli.json` 開 `deleteOutDir: true` 會在 build 前清空 `dist/`，但 tsconfig `incremental: true` 的 `tsconfig.tsbuildinfo` 若放在 dist **外**（預設 package 根），tsc 仍以為所有檔案都編譯過、只回填有變動的檔——結果 dist 只剩零星檔案，啟動就 `Cannot find module './xxx'`。症狀特徵：typecheck/tests 全綠、只有 `node dist/main` 掛。解法＝tsconfig 補 `"tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"`，讓 buildinfo 跟 dist 同生共死。（2026-07-17，hr-employee-master 輪踩到）
+
+### Git Bash（Windows）curl -d 帶中文＝寫進 DB 的就是亂碼
+Windows 的 Git Bash console codepage 非 UTF-8，`curl -d '{"name":"王小明"}'` 送出的 bytes 已經是壞的——**資料進 DB 就毒了**，不是顯示問題（用 psql 看 length 對不上即可確認）。測試 API 帶中文一律寫成 UTF-8 檔案再 `-d @file.json`。（2026-07-17）
