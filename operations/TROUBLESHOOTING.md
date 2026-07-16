@@ -39,6 +39,17 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 ### `npm run lint --fix`（全專案 glob）會重排未修改檔案的 import 格式
 prettier 規則的自然結果，不算 bug；寫 PR 時把這類格式化 diff 跟本體改動分開，別混進 commit。
 
+## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
+
+### Prisma 7：datasource `url` 不能寫在 schema
+Prisma 7 breaking change——`datasource` 的 `url` 不再寫在 `schema.prisma`。改法：CLI（`generate`/`migrate`）走 `prisma.config.ts`（`defineConfig({ datasource: { url } })`）；runtime 一律用 driver adapter（PostgreSQL＝`@prisma/adapter-pg`，`new PrismaPg(connectionString)` 傳給 `new PrismaClient({ adapter })`）。升級 Prisma 或新建專案先確認這兩處都改到位，否則 CLI 或 runtime 其一會連不到 DB。（2026-07-16）
+
+### `vue-tsc` 撞 TypeScript 7（`typescript/lib/tsc` not exported）
+monorepo 根被 hoist 上來的 TypeScript 7（來自 `@prisma/client` 的相依）會讓 `vue-tsc` 掛掉。解法＝monorepo **根** `devDependencies` 直接釘 `typescript@^5.9`——根的直接相依優先佔住 root `node_modules`，`vue-tsc` 就吃到 5.9。工具鏈報 `typescript/lib/tsc` 之類的 export 錯，先查 root 實際被 hoist 到哪個 TS 版本，別先懷疑 vue-tsc 本身。（2026-07-16）
+
+### Docker Desktop 反覆「unexpected error」起不來：`dockerInference` socket 殘留
+`%LOCALAPPDATA%\Docker\run\dockerInference` socket 檔殘留、無法移除 → Docker Desktop 開機反覆跳「unexpected error」。解法＝關掉所有 Docker 程序 → 刪掉殘留 socket 檔 → 重啟 Docker Desktop。Docker Desktop 起不來又找不到明顯原因時先查這個殘留檔。（2026-07-16）
+
 ## 本機驗證環境（家用機，2026-07-10 驗證有效；Phase 1 後改看 platform 文件）
 
 - 前端 preview port **5299**（base `/Auth/`），Steven 自己的 dev 在 5174 勿佔；後端 `npm run start:dev --prefix <根>\Ystravel-AuthService`（3001），開工先確認 3001 跑的是 start:dev 不是舊 dist build。

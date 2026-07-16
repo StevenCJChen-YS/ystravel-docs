@@ -3,10 +3,10 @@
 | 項目 | 內容 |
 |---|---|
 | 文件性質 | 跨系統設計系統來源（source of truth） |
-| 適用範圍 | Ystravel-AuthPortal、Ystravel-CRM-Frontend、未來 EIP 前端 |
+| 適用範圍 | `ystravel-platform`（`apps/portal` 及未來各模組前端）；歷史沿用：Ystravel-AuthPortal、Ystravel-CRM-Frontend |
 | 技術 | NuxtUI v4 + Tailwind CSS v4 |
 | 狀態 | 草稿（2026-07-08；2026-07-14 對齊：主色 **Auth=Teal**、語意色明暗色階 light 深一階(primary/warning 自訂 550、其餘 600)/dark 400、灰階 gray/zinc 混搭、圓角尺寸階梯、深色表頭） |
-| 前身 | 抽自 `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md`（2026-07-06，已相當成熟），升級為全公司共用版並加上「各系統主題層」 |
+| 前身 | 抽自 [authportal-ui-foundation.md](./authportal-ui-foundation.md)（2026-07-06，已相當成熟；原生於 AuthPortal，2026-07-16 遷入 docs），升級為全公司共用版並加上「各系統主題層」 |
 
 ---
 
@@ -184,7 +184,7 @@
 ## 8. 與既有文件的關係
 
 - 本文件 = 全公司**共用來源**（Base + Theme 決策）。
-- `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md` = AuthPortal 的**詳細實作規範**（shell、shared 元件、drawer、dropdown 等細節），持續有效，作為本文件的參考實作。
+- [authportal-ui-foundation.md](./authportal-ui-foundation.md) = **詳細實作規範**（shell、shared 元件、drawer、dropdown 等細節），持續有效，作為本文件的參考實作（原生於 AuthPortal，2026-07-16 遷入 docs 共通層；路徑對應平台 `apps/portal/src/...`）。
 - `docs/reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md` = `UButton` 等元件尺寸客製的技術背景。
 - CRM / EIP 未來各自可有 `docs/<system>-ui.md` 記錄自己的延伸，但**不得牴觸本文件的 Base**。
 
