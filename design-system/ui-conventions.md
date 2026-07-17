@@ -70,6 +70,7 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
   - **`App*` 包裝只在「補官方元件缺的功能」或「統一 app 慣例」時才做**（如 `AppInput`/`AppSelect` 的 clearable）；純換名字、對全域 theme 無加值的薄包裝**不做**，theme 足夠且無重複時原始 `U*` 可直接用。
   - **元件歸屬**：跨模組共用 → `shared/ui/`；單一模組專屬 → `modules/<模組>/components/`。寫任何頁面前先問「第二個模組/頁也會用嗎？」會→shared、不會→模組內。
   - 已落地例：table theme 深表頭一處改全站、`TableLoading.vue`、`useEditModal.ts`（關閉延後清 target，修「對話框收場先變矮」）。
+- **Icon 一律用 lucide（`i-lucide-*`），禁止混用其他 icon 套件**（2026-07-17 Steven 明確要求）：不同套件筆觸/比例不一致（tabler 的盾牌比 lucide 寬圓，混排一眼突兀）。lucide 找不到想要的 icon 時先上 lucide.dev 搜（新 icon 常已收錄，如 `shield-cog-corner`），真沒有再帶著候選回來問 Steven，不要自行混套件。⚠️ 附帶：icon 目前是執行期從 Iconify API 抓的（斷網會開天窗），正式部署內網前要把 lucide collection 打包進本地（部署階段待辦）。
 
 ## 10. 順序（order）管理範式（2026-07-14 定調，落地公司/部門/選項頁）
 
