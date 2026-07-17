@@ -46,8 +46,8 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 平台 `apps/portal/src/shared/ui/` 共用元件（改任何管理頁 UI 前先看有沒有現成的，別重造），**2026-07-16 PR3 起依類型分子資料夾**：
 - `base/`：有加值的原始元件包裝 `AppInput`/`AppSelect`/`DateInput`/`ToolbarButton`/`ColorModeToggle`
 - `table/`：`TableCard`/`TableLoading`/`TablePaginationFooter`/`TableSortButton`/`ColumnVisibilityMenu`/`DataToolbar`/`FilterPanel`/`OrderManager`
-- `overlay/`：`FormModal`/`ConfirmModal`　`layout/`：`LobbyShell`/`AccountShell`/`AppPageLayout`/`PageHeader`
-- `nav/`：`UserMenu`/`MySystemsMenu`/`ListPanel`/`ListItemButton`　`card/`：`SystemAppCard`/`UserIdentityCard`　`feedback/`：`EmptyState`/`PasswordStrengthMeter`
+- `overlay/`：`FormModal`/`ConfirmModal`　`layout/`：`AppPageLayout`/`PageHeader`/**`SurfaceCard`**/**`AuroraBackdrop`**（2026-07-17 統一殼後 **`LobbyShell`/`AccountShell` 退役**，見 §13）
+- `nav/`：`UserMenu`/`ListPanel`/`ListItemButton`/**`ModuleRail`**（2026-07-17 **`MySystemsMenu` 退役**，「我的系統」併入統一殼）　`card/`：`SystemAppCard`/`UserIdentityCard`　`feedback/`：`EmptyState`/`PasswordStrengthMeter`　`table/` 另加 **`TableFrame`**（見 §13）
 - import 一律走 `@/shared/ui/<類>/<元件>` 絕對別名（`@/` = `src/`）。
 
 **血淚雷點**：
@@ -76,12 +76,38 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 
 「顯示順序」是**主檔自己的屬性、在該主檔管理頁維護**（Salesforce picklist／Odoo sequence 同理），存一份、所有 consumer 讀同一份，**別每個表單各自定義順序**。**⚠️「排序」中文兩義**：sort（升降冪）vs order（序位）——Steven 講「排序欄位/順序怎麼排」是**後者**（2026-07-14 誤解過一次整套 revert）。三原則：①`order` 一律「相對同層兄弟」②UI 用拖曳（`OrderManager.vue`＝useSortable 握把拖＋「依名稱排序」一鍵＋批次儲存/取消，非 autosave）③modal 不放 order 數字欄，新增自動排最後。**給人看 1-based（`order+1`），0-based 只留程式內。** 後端 reorder 收「排好的 id 陣列」→交易重編＋audit。未做：持久 sort mode。
 
-## 11. 資訊架構：「個人/帳號」與「管理」兩世界（2026-07-12 拍板 B 案；07-16 升級帳號中心殼）
+## 11. 資訊架構：「個人/帳號」與「管理」兩世界（2026-07-12 拍板 B 案；07-16 帳號中心殼；**07-17 全併統一殼**）
 
-- 側欄（AppShell）＝管理員工作台、只放管理頁；大廳輕頂欄（`LobbyShell.vue`：logo=回我的系統、系統切換器、右上頭像 UserMenu）＝個人世界。**個人／帳號一律收右上頭像選單**，頂欄不擺個人按鈕（「找自己＝點頭像」全站一致）。
-- **帳號中心＝單一殼左子導覽（2026-07-16 桌面重構定案）**：個人資料／帳號安全／個人化三分頁共用 `AccountShell.vue`（包在 LobbyShell 內、左欄身分區＋子導覽、右欄 RouterView、桌面 `max-w-7xl`、dark 毛玻璃同 my-apps glass），**推翻 07-12「兩頁分開」案**；**擴充走左子導覽非 tabs**。分頁名「個人化」（頭貼+背景），「外觀設定」保留給未來主題/縮放（`auth-user-preferences`）避免撞名。這條左導覽是帳號中心內部導覽、非管理側欄。手機版 RWD 未做（Steven 另有想法）。
+- **【2026-07-17 統一殼】`LobbyShell`／`AccountShell` 退役、全部住進 `AppShell`**：左最窄軌 `ModuleRail`（系統切換，依權限顯示；平台區塊＝「員工入口網」icon `plane-takeoff`，rail 不放首頁鈕、點 logo 回首頁、rail 底小分隔線後放帳號中心 icon＝`railFooter`）＋單模組側欄（nav 各模組自帶 `nav.ts`，彙整於 `shared/nav/module-nav.ts`，旗標 `railHidden`/`railFooter`）。`/my-apps` 大廳併入 `/home`、「我的系統」選單移除。手機＝**Discord 式雙欄抽屜**（rail `<lg` 進 slideover，點模組先切右側清單不跳頁）。
+- **個人／帳號仍收右上/側欄底頭像選單**（`UserMenu`，「找自己＝點頭像」全站一致）。帳號中心三分頁（個人資料/帳號安全/個人化）改由 `AccountLayout`（＝`AppShell`＋`SurfaceCard`）承載、導覽走側欄（`modules/account/nav.ts`），**推翻 07-16 專屬 AccountShell**。分頁名「個人化」（頭貼+背景），「外觀設定」語意已由 §13 主題系統的「介面外觀」承接。
 - **SSO 特性**：個人資料多為公司資料唯讀（部門/職稱/角色由管理員/未來 HR 主檔管），本人能改的只有大頭貼＋背景（顯示名稱政策未定案；給的話稽核/官方列表仍用本名＋帳號）。
 
 ## 12. 角色體系顯示與代碼慣例（2026-07-15 拍板，決策本體在 [features/auth-role-management/](../features/auth-role-management/prd.md) example-mapping 決策表）
 
 ①**系統角色最少化**——只有 `SUPER_ADMIN`（全系統角色不掛 AUTH_ 前綴）是系統角色（不可刪/停用/改權限）；出廠角色（AUTH_ADMIN/AUTH_HR/CRM_*）＝起手範本、可改可刪，自建角色同等地位。②**授權/保護判斷看 permission、別看 role code**（超管 guard bypass 唯一例外）。③appCode=null 的 UI 用詞＝「**全系統**」。④前端超管代碼一律 import `SUPER_ADMIN_ROLE_CODE`（auth-api.ts），別散寫字串。⑤改角色代碼類 DB 遷移走 **seed 前置冪等收斂**，跑完要重新登入（舊 token 帶舊代碼）。
+
+## 13. 主題系統：深淺色下各自可選主題＋aurora 毛玻璃（2026-07-17 系統化，取代舊 LobbyShell 硬寫）
+
+**架構（可擴充、非硬寫）**：深淺色「模式」之下各自可選「主題」。深色＝**極光（預設）／預設（純黑）**、淺色＝預設 only；存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記，帳號級同步＝未來 `auth-user-preferences`）。實作＝`useAppTheme.ts`（watch 掛 html `.theme-aurora` class）＋Tailwind 4 `@custom-variant aurora (&:where(.dark.theme-aurora, .dark.theme-aurora *))`（`main.css`）。個人化頁「介面外觀」區出兩個主題 select。
+
+- **【鐵律】保證深色「預設」像素級等同原設計、淺色不變**：元件**只「加」`aurora:` 前綴樣式、絕不改 base class**（`aurora:` 變體本身有 `.dark` gate）。未來要加新主題＝新 class＋新 `@custom-variant`，同法炮製——**別回頭硬寫某個 shell**（LobbyShell 舊做法的反面）。
+- **⚠️ 別再用 `dark:` 做「只有某主題才要」的裝飾**：`dark:` = 所有深色（含「預設」純黑）都套 → 破壞上面的保證。極光專屬效果一律 `aurora:`。曾犯：AccountLayout／AppPageLayout 的毛玻璃原用 `dark:`，連純黑也玻璃，2026-07-17 全改 `aurora:`。（呼應 §6 的「dark 裝飾不准動 light」，多一層「aurora 裝飾不准動預設深色」。）
+
+**aurora 色值＝單一 token 區塊（唯一來源，改一處全站生效）**：所有毛玻璃/半透明值集中在 `main.css` `.dark.theme-aurora` 的 13 個語意 token，元件一律 `aurora:bg-[var(--aurora-panel)]` 引用、**不准再散寫 `neutral-900/38`、`white/8` 這類數字**（Steven 2026-07-17 明確痛點：「到處調色未來難維護」）。token 用 `color-mix` + 原本同組 Tailwind 色變數＝與舊 utility 逐位元一致。
+
+| 群組 | token | 用途 |
+|---|---|---|
+| 表面 | `--aurora-panel` `rail` `overlay` `field` `inset` `header` | 卡片/側欄/導覽列/rail/抽屜popover/input/表格內層/表頭 |
+| 狀態 | `--aurora-row-alt` `hover` `hover-soft` `active` | 斑馬列/列hover/連結hover pill/active pill |
+| 邊框 | `--aurora-border` `border-soft` `divider` | 卡片框/內層框/分隔線 |
+
+**卡片/表格外殼一律走共用元件（別再各頁貼 chrome 長字串）**：
+- **`SurfaceCard.vue`**（`shared/ui/layout/`）＝毛玻璃卡片外殼（圓角/邊框/底/陰影＋aurora 玻璃、預設深色與淺色實色）；`as` 控 section/div、`rounded` prop（大卡 rounded-xl），版面差異用 class 疊加（Vue 自動併入根元素）。
+- **`TableFrame.vue`**（`shared/ui/table/`）＝表格內縮帶框＋斑馬紋＋列 hover＋`#footer` slot（分頁選配）。`TableCard` = `SurfaceCard`＋`TableFrame`＋分頁的組裝。
+- **`AuroraBackdrop.vue`**（`shared/ui/layout/`）＝全視窗星空＋極光光暈固定背景層，`hidden dark:block` 且只在極光渲染（AppShell 條件掛載）。
+
+**按鈕的 aurora 收斂＝vite.config button theme 一處（別逐頁調）**：neutral **outline**（篩選/調整順序等工具列鈕）底走 `--aurora-field`（與 input/select 同 token 同手感）、hover 只亮邊框、active 疊白；neutral **ghost**（導覽列展開/信箱等）hover 由實心 `bg-elevated` 改 `--aurora-hover` 半透明白。primary solid 彩色鈕不需處理（彩色在星空上本來就對）。
+
+**背景層位置＝App.vue 根組件（勿放 AppShell）**：各頁自包 `<AppShell>`＝換頁整殼重掛載，背景放殼裡動畫每次歸零（2026-07-17 踩過）。`AuroraBackdrop` 固定層放 `App.vue`（app 生命週期只掛載一次、換頁動畫連續），gate＝`darkTheme==='aurora' && route.matched 有 requiresAuth`（登入等公開頁不出現）。
+
+**維護心法（往後照走）**：改 aurora 顏色→只動 `main.css` token 區塊；新卡片/表格→用 `SurfaceCard`/`TableFrame`/`TableCard`，別貼長字串。這正是 CLAUDE.md 鐵則 4（視覺調校走 theme seam、重複 UI 抽共用元件）的延伸。
