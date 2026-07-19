@@ -118,6 +118,7 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 
 1. **預防層（UI 直接擋）**：能用介面讓錯誤發生不了就先做——日曆反灰不可選日期（`DateInput` `min-value`）、下拉只列合法值、按鈕 disabled。最好的錯誤訊息是根本不會出現的錯誤。
 2. **前端驗證層 → 欄位下方紅字**：必填/格式/範圍等前端就知道的，走 `FormModal` 的 `:schema`（valibot）→ UForm 行內驗證（欄位下方紅字＋框變紅）。schema 管不到的欄外狀態（如 AdminUsersPage 的角色到期日）→ 自寫 `xxxError()` 函式即時算，紅字（`text-xs text-error`）放欄位正下方＋submit handler 入口擋。
+   - **紅字左緣對齊 input 起點，不是容器左緣**（2026-07-19 Steven 拍板）：label 在左的行內佈局（如「臨時｜到期日｜input」grid），紅字用 `col-start-N` 對到 input 那欄——錯誤講的是「這個欄位」，貼欄位起點歸屬感才對；靠容器左緣會跟 label 搶同一條線、像整張卡在報錯。UFormField 行內錯誤本來就貼 input，這條讓手寫紅字跟它一致。**全站有類似手寫錯誤訊息的位置都要照此檢查**（併入表單巡檢輪）。
    - **瀏覽器原生驗證氣泡全站禁用**：`FormModal` 的 UForm 已掛 `novalidate`（2026-07-19）。原生氣泡位置不可控、各瀏覽器長相不一、還會錨到分段輸入的隱藏 input 上（Chrome 氣泡指到 modal 外），且它搶在 schema 驗證前跑＝行內驗證永遠沒機會顯示。新表單不准依賴原生 `required`/`min`/`pattern` 提示。
 3. **後端錯誤層**：送出後才知道的，分兩種——
    - **對得到欄位的**（email 已存在、名稱重複…）：表單還開著時盡量映射回該欄位下方紅字（使用者眼睛在表單上，toast 在角落容易錯過、也不知道該改哪欄）；映射不了才 toast。
