@@ -111,3 +111,16 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 **背景層位置＝App.vue 根組件（勿放 AppShell）**：各頁自包 `<AppShell>`＝換頁整殼重掛載，背景放殼裡動畫每次歸零（2026-07-17 踩過）。`AuroraBackdrop` 固定層放 `App.vue`（app 生命週期只掛載一次、換頁動畫連續），gate＝`darkTheme==='aurora' && route.matched 有 requiresAuth`（登入等公開頁不出現）。
 
 **維護心法（往後照走）**：改 aurora 顏色→只動 `main.css` token 區塊；新卡片/表格→用 `SurfaceCard`/`TableFrame`/`TableCard`，別貼長字串。這正是 CLAUDE.md 鐵則 4（視覺調校走 theme seam、重複 UI 抽共用元件）的延伸。
+
+## 14. 錯誤顯示三層規範（2026-07-19 拍板）
+
+> 全站表單/操作的錯誤呈現只有一套，按「錯誤在哪裡被攔下」分三層。原則：**能預防就不報錯；報錯盡量貼著欄位；toast 是最後手段**。
+
+1. **預防層（UI 直接擋）**：能用介面讓錯誤發生不了就先做——日曆反灰不可選日期（`DateInput` `min-value`）、下拉只列合法值、按鈕 disabled。最好的錯誤訊息是根本不會出現的錯誤。
+2. **前端驗證層 → 欄位下方紅字**：必填/格式/範圍等前端就知道的，走 `FormModal` 的 `:schema`（valibot）→ UForm 行內驗證（欄位下方紅字＋框變紅）。schema 管不到的欄外狀態（如 AdminUsersPage 的角色到期日）→ 自寫 `xxxError()` 函式即時算，紅字（`text-xs text-error`）放欄位正下方＋submit handler 入口擋。
+   - **瀏覽器原生驗證氣泡全站禁用**：`FormModal` 的 UForm 已掛 `novalidate`（2026-07-19）。原生氣泡位置不可控、各瀏覽器長相不一、還會錨到分段輸入的隱藏 input 上（Chrome 氣泡指到 modal 外），且它搶在 schema 驗證前跑＝行內驗證永遠沒機會顯示。新表單不准依賴原生 `required`/`min`/`pattern` 提示。
+3. **後端錯誤層**：送出後才知道的，分兩種——
+   - **對得到欄位的**（email 已存在、名稱重複…）：表單還開著時盡量映射回該欄位下方紅字（使用者眼睛在表單上，toast 在角落容易錯過、也不知道該改哪欄）；映射不了才 toast。
+   - **對不到欄位的**（500、網路、權限、整批操作失敗）：toast（error 色＋`i-lucide-circle-alert`），文案走各 api 層的錯誤中文對照表（`auth-api.ts`/`hr-api.ts` `ERROR_MESSAGES`）。
+
+**現況與待辦**：novalidate＋到期日行內驗證已落地（AdminUsersPage 角色到期日＝欄外狀態驗證的參考實作）。**全站表單巡檢**（哪些 modal 還沒接 schema、哪些後端欄位錯誤還在走 toast）＝獨立一輪，未排程。
