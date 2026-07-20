@@ -48,6 +48,14 @@ Prisma 7 breaking change——`datasource` 的 `url` 不再寫在 `schema.prisma
 ### `vue-tsc` 撞 TypeScript 7（`typescript/lib/tsc` not exported）
 monorepo 根被 hoist 上來的 TypeScript 7（來自 `@prisma/client` 的相依）會讓 `vue-tsc` 掛掉。解法＝monorepo **根** `devDependencies` 直接釘 `typescript@^5.9`——根的直接相依優先佔住 root `node_modules`，`vue-tsc` 就吃到 5.9。工具鏈報 `typescript/lib/tsc` 之類的 export 錯，先查 root 實際被 hoist 到哪個 TS 版本，別先懷疑 vue-tsc 本身。（2026-07-16）
 
+### Prisma 7：`migrate reset` 不會自動跑 seed（重建後整個庫是空的）
+Prisma 7 把 seed 設定從 `package.json` 的 `prisma.seed` 移到 `prisma.config.ts` 的 `migrations.seed` 之後，
+`prisma migrate reset --force` **只重跑 migration、不執行 seed**——結束訊息看起來一切正常，
+但 `auth_users` / `companies` / `roles` 全是 0 筆。症狀＝重建完怎麼登都登不進去
+（一般登入查無帳號、Google 登入回 `GOOGLE_USER_NOT_PREPROVISIONED`，因為 Google 登入要求帳號先存在）。
+**很容易誤判成登入功能壞掉**，先查 `SELECT count(*) FROM core.auth_users;` 再懷疑程式。
+解法＝reset 之後**一定要另外跑** `npm run prisma:seed`。（2026-07-20）
+
 ### Docker Desktop 反覆「unexpected error」起不來：`dockerInference` socket 殘留
 `%LOCALAPPDATA%\Docker\run\dockerInference` socket 檔殘留、無法移除 → Docker Desktop 開機反覆跳「unexpected error」。解法＝關掉所有 Docker 程序 → 刪掉殘留 socket 檔 → 重啟 Docker Desktop。Docker Desktop 起不來又找不到明顯原因時先查這個殘留檔。（2026-07-16）
 
