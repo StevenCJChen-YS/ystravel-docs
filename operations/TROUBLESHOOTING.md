@@ -21,6 +21,14 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 ### schema/migration 改動後 watch 抱舊 client
 改完 schema 要在 repo 目錄跑 `npx prisma generate`＋重啟 watch，否則 TS error 且跑舊 code。（2026-07-10）
 
+### 切分支／merge 完，後端突然噴一堆「Property 'xxx' does not exist on type 'PrismaService'」
+**是 client 沒跟著換，不是程式碼壞掉。** Prisma 產生的 client 在 `node_modules` 裡，
+**不受 git 版控、不會跟著切分支走**——分支上的 `schema.prisma` 換了，`node_modules` 還是上一支的產物，
+於是「原始碼對、型別錯」，錯誤訊息看起來像整個 PrismaService 壞掉，很嚇人。
+
+**修：`npx prisma generate`。** 觸發時機記三個：**切分支、merge 完、pull 完**——只要 `schema.prisma`
+在那次移動中有變，就要重生一次。（2026-07-20 稽核收斂分支 merge 回 main 後中招，一次 9 個 TS error）
+
 ## 開發類
 
 ### 頁面初始化別用 Promise.all 綁死「不同權限等級的 API」
