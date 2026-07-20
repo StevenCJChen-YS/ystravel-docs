@@ -8,8 +8,9 @@
 
 ## 啟動類（起不來先看這）
 
-### pull 之後服務起不來／TS 報錯一堆（超常見，先做這兩步）
+### pull 之後服務起不來／TS 報錯一堆／seed 噴 P2022（超常見，先做這兩步）
 `Cannot find module 'sharp'`、Prisma client 缺新欄位（如 `backgroundKey`）＝ **pull 後沒 `npm install`＋`npx prisma generate`**。修：兩個都跑＋重啟 watch。DB 通常沒事：跑唯讀的 `npx prisma migrate status` 確認 schema up-to-date 即可（別急著 `migrate deploy`；它會被安全分類器判「正式部署」擋，且多半不需要）。（2026-07-16）
+**反向變體也一樣**：migration 把欄位**砍掉**後（如 data-sovereignty 砍 `auth_users.departmentId`），舊 client 還以為欄位在 → `db seed`／runtime 查詢噴 **P2022「The column … does not exist」**。看到 P2022 別懷疑 DB 壞掉——DB 多半是對的，是 client 過期；`npx prisma generate` 重生就解。口訣：**跨機器 pull 完只要 `schema.prisma` 有動，`migrate deploy`（或 status）＋`prisma generate` 成對跑**。（2026-07-20 公司機 seed 中招）
 
 ### AuthService 起不來：先查 RS256 env
 native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KEY_BASE64`、`JWT_ACCESS_KEY_ID`。缺 signing config 會在 `/auth/login` 簽 token 時 500；已補啟動時 config validation（會驗 private/public 是否同組）。新環境起不來先檢查這三個 env，別誤判成登入程式壞掉。（2026-07-08）
