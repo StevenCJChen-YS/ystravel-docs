@@ -19,9 +19,34 @@
 - 兩態用**同一套共用篩選組件**（少→平鋪、多→卡片），別每頁各寫。EIP 參考檔：`GInternational-Frontend/src/pages/B2CStatisticsManagement.vue`（filter card＋`search-label`＋查詢鈕）。
 - **「搜尋為主＋低頻條件收 FilterPanel（alwaysVisible）」＝資料量大/欄位多頁的標準範式**（稽核頁已落地，CRM 客戶/訂單沿用）。
 
-## 3. 篩選 RWD 收合範式（2026-07-13 落地，斷點 `<md`）
+## 3. 篩選 RWD 收合範式（2026-07-13 落地，斷點 `<md`；2026-07-21 補第三種模式）
 
 列表頁篩選**桌面平鋪**（filter bar 貼表格上方、即時篩選），**手機＋平板（`<md`＝768px 以下）收進 `UDrawer` 抽屜**——工具列改放「篩選 (N)」鈕（N＝作用中篩選數 `activeFilterCount`），抽屜內改**草稿值**（`draftStatusFilter` 等），按「套用」才寫回真篩選（`applyMobileFilters`／`resetMobileFilters`）。桌面下拉 `hidden md:flex`、小螢幕鈕 `md:hidden` 切同一套 filter。**斷點 07-13 從 `sm` 上調 `md`**：平板 sm~md 走桌面平鋪會擠。**分頁 footer 同步 RWD**：小螢幕（`<sm`）2 欄 grid＝分頁置中橫跨上排、下排「共N筆」左＋「每頁」右；桌面 `sm:flex justify-between` 一列（`TablePaginationFooter.vue`）。
+
+### `FilterPanel` 的三種模式（2026-07-21 定，選錯會改到行為不只改版面）
+
+| 模式 | 鈕何時出現 | 用在哪 | 前提 |
+| :-- | :-- | :-- | :-- |
+| 預設 | `<md` | 條件 ≤4 的即時篩選頁（使用者、角色） | 平鋪版在 `≥md` 排得下 |
+| `inline-from="2xl"` | `<2xl` | 條件 5 個的即時篩選頁（員工管理） | 平鋪版要 1536 才排得下 |
+| `always-visible` | 所有寬度 | 搜尋為主、**套用才查**的頁（稽核） | 沒有平鋪版 |
+
+**選模式的判準是「這頁的篩選是即時查還是套用才查」，不是螢幕寬度。**
+前兩種是同一件事的兩個斷點——平鋪版存在、只是排不排得下的差別；`always-visible` 是另一回事。
+
+⚠️ **不要把 `inline-from` 套到稽核頁**（2026-07-21 Steven 問過，評估後不做）。稽核的四個條件
+直接綁真值、**按「套用」才打一次 API**；平鋪版沒有套用鈕，等於每動一個下拉就掃一次全模組
+共用的稽核大表。而且它有起日/迄日兩個 `DateInput`，平鋪吃掉約 300px，日期範圍本來就適合
+在面板裡挑。**同一個 prop 套在兩頁上的後果不同，先看那頁是不是即時篩選。**
+
+實作：斷點 class 要寫死字面值（`{ md: 'md:hidden', '2xl': '2xl:hidden' }`），
+Tailwind 掃的是原始碼字串，動態拼 `` `${bp}:hidden` `` 產不出 class。
+
+### 篩選條件多到平鋪排不下時，先量再決定斷點
+
+員工管理 5 個條件（公司/部門/職稱/聘僱類型/狀態）實測：1536 時工具列 1074／1142px 不換行，
+餘裕 68px；1280 會擠掉搜尋框。**別憑感覺挑斷點——用 `getBoundingClientRect` 量工具列那一列的
+寬度與 `top`（`top` 值出現兩種＝已經換行了）。**
 
 ## 4. UTable 密度（2026-07-12 查證）
 
