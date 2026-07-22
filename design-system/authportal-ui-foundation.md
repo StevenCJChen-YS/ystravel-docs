@@ -1,5 +1,18 @@
 # AuthPortal UI Foundation
 
+> # ⛔ 本檔已停止維護（2026-07-22），且**多處內容已作廢**
+>
+> 有效內容已整併進 **[design.md](./design.md)＝設計系統唯一權威規範書**。
+> **不可作為依據。** 已知作廢處（整併時發現的矛盾，詳見 design.md 附錄）：
+>
+> | 本檔說法 | 現行規則 |
+> |---|---|
+> | §3.1 `neutral = slate` | light gray／dark zinc 明暗混搭 |
+> | §3.3 `bg-elevated` ＝ card、`bg-default` ＝ 整頁背景 | **卡片用 `bg-default`**；`bg-elevated` 是卡內次層帶（light 下與頁底同值會糊掉） |
+> | §9 `AuthAdminShell` / `AuthAccountShell` 雙殼 | 已退役，全站單一 `AppShell` |
+> | §10 `SidebarUserCard` | 已改名 `UserIdentityCard` |
+> | §12 第一波落地範圍、§13 命名建議 | 已完成，屬歷史紀錄 |
+
 更新日期：2026-07-06
 
 > **落腳說明（2026-07-16）**：本檔原生於 `Ystravel-AuthPortal/docs/AUTHPORTAL_UI_FOUNDATION.md`。Phase 1 架構整併後 AuthPortal 併入 `ystravel-platform`（`apps/portal`）並將 GitHub Archive，這份「詳細實作規範」屬跨專案共通知識，故遷入 docs 共通層作為權威版；原 repo 的舊拷貝隨封存唯讀化，不再維護。文內 `Ystravel-AuthPortal` / `src/...` 等舊路徑對應平台的 `apps/portal/src/...`。與 [foundation.md](./foundation.md) 的分工：foundation＝設計系統本體；本檔＝詳細實作規範（shell、shared 元件、drawer、dropdown 等細節）。

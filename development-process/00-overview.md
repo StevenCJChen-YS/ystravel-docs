@@ -64,7 +64,7 @@ Discovery(要不要做)
 | Code Review | [08-code-review-checklist.md](./08-code-review-checklist.md) |
 | Release | [09-release-checklist.md](./09-release-checklist.md) |
 | UI/UX 設計流程 | [10-uiux-guide.md](./10-uiux-guide.md) |
-| 共用設計系統(顏色/字體/主色) | [../design-system/foundation.md](../design-system/foundation.md) |
+| 共用設計系統(顏色/字體/主色/元件) | [../design-system/design.md](../design-system/design.md)（唯一權威規範書） |
 
 ## 4. 每個功能的文件放哪
 

@@ -1,7 +1,10 @@
-# UI 慣例與實作雷點（UI Conventions & Pitfalls）
+# UI 慣例與實作雷點（設計決策紀錄）
 
-> **定位**：本檔承接原本記在 AI 分身記憶（my-agent `MEMORY.md`）裡的 UI 範式、拍板決策與踩坑雷點——2026-07-16 知識分層整理時遷移至此。
-> **與 [foundation.md](./foundation.md) 的分工**：foundation＝設計系統規範本體（token、色階、元件規格）；本檔＝**範式決策的時間線、理由、與實作層的血淚雷點**。兩檔衝突時以最新拍板為準並回頭更新。
+> **定位（2026-07-22 更新）**：本檔＝**「為什麼是這條規則、當初踩過什麼坑」的決策時間線**。
+> **要查「現在的規則是什麼」，一律看 [design.md](./design.md)（唯一權威規範書）**——本檔不是規範，是規範背後的脈絡。
+> 什麼時候需要本檔：想推翻某條規則、遇到詭異現象想知道有沒有人踩過、或要理解某個設計為何長這樣。
+> 兩檔衝突時以 design.md 為準；若本檔有更新的拍板，先改 design.md 再回來補紀錄。
+> 原承接自 AI 分身記憶（my-agent `MEMORY.md`），2026-07-16 知識分層整理時遷移至此。
 > 📁 路徑基準（2026-07-16 Phase 1 整併完成後更新）：本檔 `src/shared/ui`、`src/shared/composables` 等路徑對應平台的 **`apps/portal/src/...`**（`ystravel-platform`）；早期以 `AuthPortal` 為主詞的敘述皆指同一份已遷入 platform 的程式碼。
 
 ---
@@ -62,18 +65,16 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 - **浮層（2026-07-13 定調）**：dark 下陰影幾乎看不見 → 上層元素（modal／popover／下拉 content／表格卡）用 **`ring-1 dark:ring-white/25`（hairline）＋深色明度分層**（頁底 `neutral-950` < 卡/modal/側欄 `850`，表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底 `950`）；switch thumb dark 白。**新 dark UI 一律照這套做浮起感，別靠 `shadow`。**
 - **【ALWAYS】dark 裝飾效果不准動到 light（2026-07-15）**：裝飾層元素用 `hidden dark:block` 只在 dark 掛載；效果 class 一律 `dark:` 前綴（light 有 `bg-white` 要 `dark:bg-transparent` 蓋掉再疊漸層）。**改完務必切 light 實測 computed**（bgColor 實心、backdrop `none`、border 還在、裝飾層 `display:none`）才算數。曾犯：大廳毛玻璃兩模式都套，light 白卡被改掉。
 
-## 7. 品牌主色＋明暗色階（2026-07-14 定案，規範本體在 [foundation.md](./foundation.md) §1/§5）
+## 7. 品牌主色＋明暗色階（2026-07-14 定案，規範本體在 [design.md](./design.md) §2）
 
 **Auth primary = teal**（推翻先前 blue）；CRM=Violet、EIP 待定；各系統只改 `primary` 別名（semantic token，`vite.config` 一行全連動）。**明暗色階**：語意色 light 深一階、**dark=400**（白底要深、深底要亮）——`main.css` `:root`＋`.dark` 補 -400。light 階：**primary(teal)/warning(amber)＝自訂 550 半階**（oklch 插值；自訂半階要同時接 Tailwind `--color-*-550` 與 Nuxt `--ui-color-*-550` 兩套別名）、success/info＝600。**固定色階例外**：solid 主鈕 `bg-primary-550`、switch checked `bg-primary-500`（明暗一致）。**表格資訊標籤用 `info`(sky) 不用品牌 primary**（否則搶眼）。⚠️`vite.config` 改動要**重啟 dev server**（build-time，非 HMR）。
 
-## 8. 管理後台共用元件＋實作雷點（2026-07-14~15，元件規格本體在 [foundation.md](./foundation.md) §11）
+## 8. 管理後台共用元件＋實作雷點（2026-07-14~15，元件清單與規格在 [design.md](./design.md) §6/§7）
 
-平台 `apps/portal/src/shared/ui/` 共用元件（改任何管理頁 UI 前先看有沒有現成的，別重造），**2026-07-16 PR3 起依類型分子資料夾**：
-- `base/`：有加值的原始元件包裝 `AppInput`/`AppSelect`/`DateInput`/`ToolbarButton`/`ColorModeToggle`
-- `table/`：`TableCard`/`TableLoading`/`TablePaginationFooter`/`TableSortButton`/`ColumnVisibilityMenu`/`DataToolbar`/`FilterPanel`/`OrderManager`
-- `overlay/`：`FormModal`/`ConfirmModal`　`layout/`：`AppPageLayout`/`PageHeader`/**`SurfaceCard`**/**`AuroraBackdrop`**（2026-07-17 統一殼後 **`LobbyShell`/`AccountShell` 退役**，見 §13）
-- `nav/`：`UserMenu`/`ListPanel`/`ListItemButton`/**`ModuleRail`**（2026-07-17 **`MySystemsMenu` 退役**，「我的系統」併入統一殼）　`card/`：`SystemAppCard`/`UserIdentityCard`　`feedback/`：`EmptyState`/`PasswordStrengthMeter`　`table/` 另加 **`TableFrame`**（見 §13）
-- import 一律走 `@/shared/ui/<類>/<元件>` 絕對別名（`@/` = `src/`）。
+平台 `apps/portal/src/shared/ui/` 共用元件依**類型**分子資料夾（2026-07-16 PR3 起），import 一律走 `@/shared/ui/<類>/<元件>` 絕對別名。
+**完整元件清單＝[design.md](./design.md) §7**（本節不再重列，避免兩份清單各自漂移）。
+
+沿革：2026-07-17 統一殼後 **`LobbyShell`/`AccountShell`/`MySystemsMenu` 退役**（「我的系統」併入統一殼，見 §13），新增 `SurfaceCard`/`AuroraBackdrop`/`TableFrame`/`ModuleRail`。
 
 **血淚雷點**：
 

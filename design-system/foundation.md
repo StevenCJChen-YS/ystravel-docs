@@ -1,5 +1,11 @@
 # Ystravel 設計系統 — Foundation（全公司共用）
 
+> # ⛔ 本檔已停止維護（2026-07-22）
+>
+> 內容已整併進 **[design.md](./design.md)＝設計系統唯一權威規範書**。
+> **查規則請看 design.md，不要用本檔。** 本檔保留僅為考古與既有連結不斷，內容可能已過時。
+> 決策時間線與踩坑經過見 [ui-conventions.md](./ui-conventions.md)。
+
 | 項目 | 內容 |
 |---|---|
 | 文件性質 | 跨系統設計系統來源（source of truth） |
