@@ -6,7 +6,7 @@
 
 | 文件 | 是什麼 | 何時看 |
 |---|---|---|
-| `docs/design-system/foundation.md` | 全公司共用設計系統（顏色/字體/密度/按鈕…）＋ 各系統主色 | 做任何畫面前的地基，不常改 |
+| `docs/design-system/design.md` | 全公司共用設計系統規範書（顏色/字體/密度/元件/RWD/主題…） | 做任何畫面前的地基，**動 UI 前必讀** |
 | 本文件 | 「單一功能」做畫面的流程步驟 | 每次新功能的 UI 階段 |
 
 **原則：畫面一律用 design-system 的 token 與 NuxtUI 元件，不各頁自己發明顏色/尺寸。**
@@ -54,8 +54,8 @@ PRD 第 6 節「UI/UX 重點」列畫面清單
 AI 草擬 PRD 時，第 6 節至少列：
 - 需要哪些畫面 / 狀態（含上面四種狀態）
 - 特別要注意的互動或例外
-- 可沿用的既有元件（參照 `design-system/foundation.md` §4、AuthPortal shared UI 清單）
-- 這個功能屬於哪個系統 → 用該系統的主色（Auth=Blue / CRM=Violet / EIP=Teal）
+- 可沿用的既有元件（參照 `design-system/design.md` §7 共用元件庫清單）
+- 這個功能屬於哪個系統 → 用該系統的主色（**平台＝Teal**／CRM=Violet／EIP 待定，見 `design.md` §2.1）
 
 ## 6. 什麼時候可以完全跳過這份流程
 

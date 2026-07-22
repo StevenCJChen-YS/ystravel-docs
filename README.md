@@ -11,9 +11,9 @@
 | **資料庫 / PostgreSQL / 換 DB / 資料遷移** | 現行決策：[ADR-2026-07-16 §5](./architecture/ADR-2026-07-16-platform-modular-monolith.md)（**PostgreSQL**）；遷移 checklist 思路：[architecture/DATABASE.md](./architecture/DATABASE.md)（已標 superseded） |
 | **開發流程 / 要走哪些步驟 / PRD·SA·SD·BDD** | [development-process/00-overview.md](./development-process/00-overview.md) |
 | **某個功能的規格文件** | [features/](./features/README.md) → 一個功能一個資料夾 |
-| **UI / 設計系統 / 顏色 / 元件 / RWD / 深色模式** | [design-system/foundation.md](./design-system/foundation.md) |
-| **UI 範式決策時間線 / 實作雷點（篩選、icon-only、表格欄寬、順序管理、帳號中心 IA、字重…）** | [design-system/ui-conventions.md](./design-system/ui-conventions.md)（2026-07-16 自 AI 分身記憶遷移） |
-| **UI 詳細實作規範（shell、shared 元件、drawer、dropdown…；foundation 的參考實作）** | [design-system/authportal-ui-foundation.md](./design-system/authportal-ui-foundation.md)（原生於 AuthPortal，2026-07-16 遷入 docs） |
+| **UI / 設計系統 / 顏色 / 字級 / 元件 / RWD / 深色模式 / 主題 / 共用元件清單** | ⭐ [design-system/design.md](./design-system/design.md)——**唯一權威規範書**（2026-07-22 整併三份而成），動 UI 前必讀 |
+| **某條 UI 規則「為什麼」是這樣 / 踩過什麼坑 / 想推翻某個設計** | [design-system/ui-conventions.md](./design-system/ui-conventions.md)（決策時間線與雷點，**不是規範**） |
+| ~~foundation.md／authportal-ui-foundation.md~~ | ⛔ 2026-07-22 起停止維護，內容已併入 design.md；原檔留存僅供考古 |
 | **踩坑 / 服務起不來 / 環境排障 / 匯入效能 / Google 登入測試** | [operations/TROUBLESHOOTING.md](./operations/TROUBLESHOOTING.md)（2026-07-16 自 AI 分身記憶遷移） |
 | **Nuxt UI 元件尺寸客製** | [reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md](./reference/AUTHPORTAL_NUXTUI_COMPONENT_SCALE.md) |
 | **權限模型 / 角色體系** | [architecture/CRM_AUTH_SERVICE_SA.md](./architecture/CRM_AUTH_SERVICE_SA.md) ＋ [features/auth-role-management/](./features/auth-role-management/prd.md) |
