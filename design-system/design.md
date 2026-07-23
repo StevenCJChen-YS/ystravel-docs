@@ -378,6 +378,10 @@ tooltip: {
 ### 6.7 空狀態與其他
 
 - **`EmptyState`**：`UEmpty variant="naked"` ＋ `border-dashed`（官方 outline/subtle 的框是 `ring`＝box-shadow，做不出虛線）。`sm`＝窄欄用、`md`＝大區塊。
+- **浮層裡的空狀態（可搜尋下拉、command palette…）＝借 `EmptyState` 的結構語言，但不要套那個元件。** 它是虛線框＋24px 內距，塞進浮層會變成「框裡面又一個框」（同樹狀選項踩過的兩層框）。
+  做法：小 icon（`size-5 text-dimmed`）／標題 `text-default`／說明 `text-xs text-dimmed`，**層次靠顏色做**——官方 `empty` 插槽外層已經是 `text-sm text-muted` 置中，標題不升 `text-default` 的話兩行會糊成一坨（2026-07-23 實作時 Steven 當場退回過一次）。
+- **選項範圍有收斂時，空狀態要「指路」，不能只說「找不到」。** 清單本身有範圍限制（例：稽核的動作下拉跟著檢視分頁收斂）時，攤開清單使用者看得到範圍、不會誤會；**一旦加了搜尋框，空白就讀起來像「系統沒有這個東西」而不是「你在錯的地方」**。
+  要接著講出正確的位置（「切到『登入與安全』分頁再搜尋看看」），且**位置名從資料反查、不要寫死文案**——之後新增選項或分頁才不必回頭改字。
 - **空值一律 `—`（em dash）**：`?? '—'` 或 `<span class="text-dimmed">—</span>`，不准出現 `-`／`_`。
 - **顯示給使用者的資料用中文名，不露 code**：有 code＋name 的實體一律顯示 name（hover 補英文代碼）。
 - **modal 縮窄**：欄位少的建立/編輯 modal 用 `width-class="sm:max-w-md"`，別用預設 512 太寬。
