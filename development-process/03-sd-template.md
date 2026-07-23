@@ -35,6 +35,33 @@ Prisma model 的新增/修改欄位,附上 migration 名稱規劃。
 
 依照既有 pattern(參照 `Ystravel-CRM-Backend/src/<existing-module>/`),不要引入新的分層風格。
 
+## 4.5 前端分層(有畫面就必填)
+
+> **為什麼要在 SD 就決定**:前端分層是 Code Review 擋件標準(`ystravel-platform/CLAUDE.md` 鐵則 4)。
+> 等到 review 才發現「這個元件該抽到 `shared/ui/`」,元件已經寫在模組裡、其他頁也開始 import 了。
+> 判準只有一句:**「第二個模組也會用到嗎?」** 會 -> `shared/ui/`,不會 -> `modules/<模組>/components/`。
+
+### 4.5.1 新元件歸屬
+
+| 元件 | 歸屬 | 理由 |
+|---|---|---|
+| `<元件名>` | `shared/ui/<base\|table\|overlay\|layout\|nav>` ｜ `modules/<模組>/components/` | 第二個模組會不會用到 |
+
+### 4.5.2 三個必答問題
+
+- **需要新增 `App*` 包裝嗎?** -> 不需要 ｜ 需要,補的是官方元件缺的 `<什麼功能>`
+  (提醒:純換名字、對全域 theme 無加值的薄包裝**不做**;theme 夠用就直接用原始 `U*`)
+- **需要動全域 component theme 嗎?** -> 不需要 ｜ 需要,改 `vite.config` 的 `<元件>` 的 `<什麼>`
+  (提醒:業務頁**禁止** `!important` 與深層選擇器硬蓋)
+- **有沒有跟既有共用元件重複的樣式?** -> 沒有 ｜ 有,應抽成 `<共用元件名>`
+  (重複的 UI 樣式一定要抽,不可各頁重造——這也是擋件標準)
+
+### 4.5.3 畫面與狀態
+
+沿用 PRD §6 列的畫面清單,確認每個畫面的**四種狀態**都有著落(loading / 空 / 錯誤 / 正常),
+細節見 [10-uiux-guide.md](./10-uiux-guide.md) §4。設計 token 與元件規範一律以
+[design-system/design.md](../design-system/design.md) 為準。
+
 ## 5. 認證與授權方式
 
 - 沿用哪個 guard(`JwtAuthGuard`、`PermissionsGuard`)?
