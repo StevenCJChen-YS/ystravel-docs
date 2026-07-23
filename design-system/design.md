@@ -465,6 +465,34 @@ tooltip: {
 - **`DataToolbar` inline 模式**：動作少的頁小螢幕也單列（搜尋 `flex-1`＋動作貼右）；動作多維持堆疊。
 - **grid 子項要補 `min-w-0`**：`lg:grid-cols-[Npx_minmax(0,1fr)]` 在 `<lg` 塌單欄時，子項預設 `min-width:auto`，內含表格會撐破欄寬造成整頁橫向捲動。
 
+### 8.5 捲動與畫面角落的浮動元件（2026-07-23）
+
+**捲的不是 window。** `AppShell` 是 `fixed inset-0 overflow-hidden`，真正在捲的是 Nuxt UI
+dashboard panel 的 body——`window.scrollTo` / `window.scrollY` / `useWindowVirtualizer`
+在本站**通通沒作用**。任何跟捲動打交道的功能一律用共用的
+`shared/composables/useScrollRoot`，不要自己寫一份（那個判定有 CSS 陷阱，見
+`operations/TROUBLESHOOTING.md`）。
+
+**長清單一律跟著整頁捲，不要給它自己的捲動區。** 「頁面主體就是一張表／一棵樹」的管理頁，
+標準做法是整頁捲＋底層虛擬化。硬塞一個 `max-h` 內捲區塊會同時製造兩個問題：桌機高螢幕
+下方留一片空白、手機變成頁面與清單**兩層巢狀捲動**（2026-07-23 選項樹踩過，Steven 回報）。
+
+**畫面角落只能有一個常駐主角。** 右下角歸**全站回頂部鈕**（`i-lucide-arrow-up-to-line`、
+圓角正方、桌機 40×40／手機 36×36、`fixed right-4 bottom-4 z-40`）：
+
+- 捲超過 **400px** 才淡入；**捲到頂整顆移除**（`v-if`，不是變透明）——不佔位就不可能擋到手機內容
+- 桌機 toast 也在右下 → **toast 讓位**：viewport 從 `bottom-4` 抬到 `bottom-20`，
+  **只在按鈕顯示時抬**（固定抬高會讓頁面頂端的 toast 下方空一段沒有理由的距離），
+  並加 `transition-[bottom]`——沒有它，顯示中的 toast 剛好跨越門檻會「跳」一下，讀起來像 bug
+- ⚠️ **不要把 toast 改到 `top-right` 來閃避**：實測會蓋住 header 的「內部收件匣」鈴鐺，
+  疊 4 則時整個右上被吃掉；通知 toast 蓋住通知鈴鐺說不過去
+- 手機 toast 在 `top-center`，與按鈕不同角落，不需處理
+
+**長清單的效能門檻。** 每列的成本要算**元件實例**而不是 DOM 或按鈕數——包裝元件比被包的那顆
+還貴（選項樹實測每列 64 個實例，其中約一半來自 5 個 `UTooltip` 的四層包裝）。
+可見列數可能破百的清單一律虛擬化（`@tanstack/vue-virtual`，flatten visible nodes + windowing），
+不要靠「加個 loading 遮一下」掩飾卡頓。
+
 ---
 
 ## 9. 主題系統（深淺色 ×主題）

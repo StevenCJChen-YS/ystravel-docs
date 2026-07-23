@@ -45,6 +45,19 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 ### Google 登入測試規則（native login 與 Google login 是兩條路徑）
 `GOOGLE_ALLOWED_TEST_EMAILS` 只影響 Google OAuth 流程，**不影響帳密登入**（「同 email 不在白名單仍可帳密登入」不是 bug）。非 production 若設了測試白名單，Google 帳號選擇器**不要送公司網域 `hd` 提示**，否則私人 Gmail 白名單帳號會在選號畫面被藏起來造成誤判；正式環境維持 `hd` 提示。（2026-07-09）
 
+### 找「捲動容器」的三個陷阱（虛擬化、回頂部、任何要讀 scrollTop 的功能）
+2026-07-23 選項樹虛擬化踩到，判定寫錯三次才對。**平台已有共用的 `shared/composables/useScrollRoot`，直接用，不要自己再寫一份。**
+1. **只看 `getComputedStyle(el).overflowY` 會抓錯**：CSS 規定「一軸設成非 `visible` 時，另一軸的 `visible` 會被強制算成 `auto`」，所以只設了 `overflow-x-auto` 的容器（例：`TableFrame`），讀 `overflowY` 也是 `'auto'`。它高度跟著內容長 → 被誤判成「無限高的視窗」→ 全部列都算可見，虛擬化等於沒開，而且**完全沒有錯誤訊息**。
+2. **改用「`scrollHeight > clientHeight`」濾掉①會換一個更慘的**：內容短時沒有任何祖先正在捲 → 找不到容器 → 虛擬化器視窗高度 0 → **渲染 0 列，整個清單在畫面上消失**。
+3. **用「容器高度 < 內容總高」當條件會讓判定依賴資料量**：資料一變（展開/搜尋）判定還沒更新，那一幀會退回「全部渲染」——每次展開都白付一次全渲染成本（實測 207 列 1,051ms），優化等於沒做。
+**正解＝取「最外層」的可捲祖先**：與內容多寡無關，掛載時算一次就固定。本站最外層一定是 dashboard panel 的 body（`AppShell` 是 `fixed inset-0 overflow-hidden`，再往上沒有可捲的了）。
+**附帶兩條**：①**`window.scrollTo` / `useWindowVirtualizer` 在本站無效**（捲的不是 window）②虛擬清單一定要在高度容器上加 **`overflow-anchor: none`**——Chrome 的捲動錨定會與虛擬化互相拉扯，實測捲到 4000 會自己滑回 0 ③清單起點若不在容器頂端（上面有頁首/工具列），要把位移餵給虛擬化器的 `scrollMargin`，否則可見範圍整個偏掉。
+
+### 估算前端「每列成本」要算元件實例，不是 DOM 或按鈕數
+2026-07-23：選項樹原本註解寫「207 列 × 5 顆按鈕 ≈ 850 個元件」，實測按鈕數 +852 完全吻合，但**真正的 Vue 元件實例是 14,785（每列 64）**——差 8 倍，因為漏算每列 5 個 `UTooltip` 各自的四層包裝（`TooltipRoot`+`Trigger`+`Portal`+`FieldGroupReset`）。
+**量法**（dev build 有 `__vueParentComponent` 才能用）：`const s=new Set();document.querySelectorAll('*').forEach(el=>{let c=el.__vueParentComponent;while(c){s.add(c.uid);c=c.parent}});s.size`
+**要點**：①包裝元件（Tooltip/Popover）常比被包的那顆還貴，而且**不產生 DOM**，所以只看 DOM 數會嚴重低估 ②單純把 5 個 `UTooltip` 換成原生 `title`，實測元件少一半、時間少 37%、**DOM 一個都沒少**。
+
 ### `npm run lint --fix`（全專案 glob）會重排未修改檔案的 import 格式
 prettier 規則的自然結果，不算 bug；寫 PR 時把這類格式化 diff 跟本體改動分開，別混進 commit。
 
