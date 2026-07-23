@@ -118,10 +118,16 @@ AI 的 context window 有限,而且接近上限時推理品質會下降(約 120K
 | 2 | `/to-tickets` | 切成垂直切片票(只有「大」尺寸才需要) |
 | 3..N | `/implement` | 照票實作,內部驅動 BDD/TDD |
 | 3..N | `/code-review` | 兩軸 review(見 08) |
+| 3..N | `/tdd` | `implement` 內部驅動的 red-green 迴圈 |
 | 視需要 | `/prototype` | 版面或狀態機講不清時,做丟棄式多版本比較(見 10) |
-| 視需要 | `/wayfinder` | 連要做什麼都講不清的大工程,先撥霧 |
+
+`/code-review` 是 **Claude Code 內建指令,不是 skill**,不用裝。
+
+> ⚠️ **`/wayfinder` 尚未安裝**(給「連要做什麼都講不清」的大工程用,例如 W3 SP 團系統)。
+> 它重度依賴 issue tracker,要用之前得先適配,屆時再說。
 
 skill 本體在 `my-agent/000_Agent/skills/`(`~/.claude/skills` 是指過去的 symlink)。
+**換一台機器要先確認那條 symlink 存在**,否則 pull 到檔案也不會生效。
 
 ## 4. 每個功能的文件放哪
 
