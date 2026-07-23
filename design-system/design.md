@@ -385,6 +385,15 @@ tooltip: {
 - **空值一律 `—`（em dash）**：`?? '—'` 或 `<span class="text-dimmed">—</span>`，不准出現 `-`／`_`。
 - **顯示給使用者的資料用中文名，不露 code**：有 code＋name 的實體一律顯示 name（hover 補英文代碼）。
 - **modal 縮窄**：欄位少的建立/編輯 modal 用 `width-class="sm:max-w-md"`，別用預設 512 太寬。
+- **有輸入欄位的 modal 一律走 `FormModal`，不要手刻 `UModal`**（2026-07-23 收斂帳號中心三顆）。
+  手刻的會少掉晃動提示、footer 樣式與標題凍結，行為跟其他頁不一致。
+- **點遮罩能不能關＝看「誤關的代價」，不是看畫面大小**：
+  - **鎖住（預設，`dismissible=false`）**：有打字的表單。誤關要重打，代價高 → 點遮罩改成
+    **晃一下**（macOS 對話框手勢），明確告訴使用者「這裡關不掉，走取消或 X」。
+  - **可關（`dismissible`）**：挑一下就走的輕操作（換頭像、選名片背景）。誤關重開零成本，
+    鎖住反而礙事。
+  ⚠️ **「有擋但沒有回饋」＝使用者會以為程式壞了**——這正是手刻 UModal 的問題（點遮罩靜默無反應）。
+  要嘛給晃動，要嘛就讓它關。
 
 ---
 
@@ -417,6 +426,13 @@ tooltip: {
 ### 8.1 控件狀態四條硬規則
 
 1. **停用的控件不准對滑鼠有任何回應**：`hover`/`active` 一律掛 `not-disabled:`。停用還會變邊框，使用者會以為點得動。（已在 `vite.config` 的 button/input/textarea/select/selectMenu theme 補齊。）
+   ⚠️ **只要你覆寫了 hover 的底色或邊框，就要自己補 gate——官方的 `disabled:` 保護不到你的覆寫。**
+   官方 theme 用 `disabled:bg-*` 把停用態壓回去，那只蓋得住官方自己的 hover 值；我們在同層寫的
+   `hover:bg-*`／`aurora:hover:bg-*` 特異性相同、順序在後，照樣贏。
+   **踩法（2026-07-23）**：light 看起來正常、dark/aurora 才露餡——因為 light 我們的 hover 值恰好
+   與底色同值（巧合，不是設計），aurora 換成半透明值就現形。
+   **檢查法**：`vite.config` 裡搜 `hover:`／`active:`，每一條問「這是我們自己寫的嗎」，是就要有 `not-disabled:`；
+   驗證要**真滑鼠 hover ＋量 computed**（停用件 hover 前後同值），別只看截圖。
 2. **警告色只留給「真正需要行動」的事**：狀態資訊用欄位＋篩選呈現，不要常駐警告。天天顯示不是問題的事，只會訓練使用者無視所有警告。
 3. **連動下拉：父層沒選就 disabled，並用 placeholder 講下一步**（「請先選擇公司」）。**同一條規則要同時套到 modal 表單與篩選列**，且父層變更/清空時一併重置子層。
 4. **輸入框內緣的小圖示鈕用原生 `title` 不用 `UTooltip`**（見 §6.4），並**一律加 `@mousedown.prevent`**——不擋的話按下瞬間輸入框先失焦，表單會用舊值跑驗證而閃出錯誤。
@@ -425,6 +441,11 @@ tooltip: {
 
 - **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。已抽到 `vite.config` 各 content slot，新元件自動套用。
 - **【鐵律】dark 裝飾效果不准動到 light**：裝飾層用 `hidden dark:block` 只在 dark 掛載；效果 class 一律 `dark:` 前綴。**改完務必切 light 實測 computed** 才算數。
+- **遮罩（scrim）全站同一種深度＝`bg-black/50 dark:bg-black/70`**（2026-07-23 定）。官方預設是
+  `bg-elevated/75` 霧白，深色頁面上分離感不足；dark 加深到 70% 對齊 Material dark 慣例（60~70%）。
+  ⚠️ **三個元件的層位不同，覆寫要各放各的同層才贏**：`modal` 的底色在 **overlay 變體層**
+  （`variants.overlay.true.overlay`）、`drawer`／`slideover` 在 **slots 層**（`slots.overlay`）。
+  放錯層＝靜默無效。改遮罩時**三個一起改**，別只改 modal（drawer/slideover 曾漏改半年）。
 
 ### 8.3 錯誤顯示三層
 
@@ -631,6 +652,8 @@ tooltip: {
 14. 依賴瀏覽器原生驗證氣泡（見 §8.3）
 15. 信件用 class／外部 CSS，或用 flex／grid 排版（見 §11.5）
 16. 信件顏色自己定，沒走 §11.1 的四級；或 h1 與按鈕共用同一份文案（見 §11.3）
+17. 覆寫了 `hover:`／`active:` 的底色或邊框卻沒補 `not-disabled:`（見 §8.1-1）
+18. 有輸入欄位的 modal 手刻 `UModal` 而非用 `FormModal`（見 §6.7）
 
 ---
 
