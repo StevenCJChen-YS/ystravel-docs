@@ -84,16 +84,32 @@
 | 對象 | light | dark |
 |---|---|---|
 | 語意變數 `--ui-*`（`text-primary`／subtle・soft 標籤／focus ring／outline 主鈕） | primary(teal)、warning(amber) ＝**自訂 550 半階**；success／secondary／info ＝ 600；error(rose) 用預設 | **400** |
-| **solid 主鈕**（固定色階，明暗一致） | `bg-primary-550`，hover/active → 600/700 | 同 light |
+| **solid 主鈕**（固定色階，**明暗拆階**，2026-07-24 拍板） | `bg-primary-550` 白字（2.98，**刻意接受例外**見 §2.7），hover/active → **650/750** | `bg-primary-450` **深字** `text-neutral-900`（8.37 ✅），hover/active → **550/650** |
+| **solid error 鈕**（固定色階，明暗一致，2026-07-24） | `bg-error-600` 白字（4.53 ✅），hover/active → 700/800 | 同 light |
 | **switch checked**（固定色階，明暗一致） | `bg-primary-500` | 同 light |
 
-**自訂 550 半階的做法**（Nuxt UI `--ui-color-*` 別名只內建 50–950）——**兩套別名都要接**，缺一不生效：
+> **solid 主鈕拆階的來龍去脈**（2026-07-24，取代 07-14「明暗一律固定 550」）：550 白字僅 2.98
+> 未達 AA，本輪原意是修到達標——但過標的 light 候選 Steven 都嫌深（650＝4.59、700＝5.36 皆
+> 看過實畫面後否決），**拍板「好看優先」維持 550、列刻意接受例外**（teal 亮階配白字物理上
+> 到不了 4.5，見 §2.7）。dark 側則真正修好：700 明暗通用版對背景分離度腰斬（3.30）淘汰、
+> 550 深字版 active 越按對比越掉（3.31）淘汰，定案**亮底深字**（Material／Nuxt UI 官方同路線，
+> 官方 dark＝400 深字，我們取自訂 450 半階稍飽和）。最終梯度＝**「半階位整步跳」：
+> light 550→650→750、dark 450→550→650，dark 就是 light 整體亮一階**。各組合數字見 §2.7。
+
+**自訂半階的做法**（Nuxt UI `--ui-color-*` 別名只內建 50–950）——**兩套別名都要接**，缺一不生效
+（例外：650 只當 utility 用、沒被 `--ui-*` 引用，接 ① 即可）：
 
 ```css
 @theme {
+  --color-teal-450: oklch(74.05% 0.146 182.2);    /* oklch 插值取 400/500 中間（主鈕 dark base） */
   --color-teal-550: oklch(65.2% 0.129 183.604);   /* oklch 插值取 500/600 中間 */
+  --color-teal-650: oklch(54.6% 0.105 185.8);     /* ⚠️ 非中點：中點白字 4.41 差 0.09 不過 AA，取「最淺過標點」＝4.59 */
+  --color-teal-750: oklch(47.4% 0.087 187.3);     /* oklch 插值取 700/800 中間（主鈕 light active） */
   --color-amber-550: oklch(71.75% 0.1835 64.199);
-  --color-primary-550: var(--color-teal-550);      /* ① Tailwind utility 用（bg-primary-550） */
+  --color-primary-450: var(--color-teal-450);      /* ① Tailwind utility 用（bg-primary-450） */
+  --color-primary-550: var(--color-teal-550);
+  --color-primary-650: var(--color-teal-650);
+  --color-primary-750: var(--color-teal-750);
   --color-warning-550: var(--color-amber-550);
 }
 :root {
@@ -134,6 +150,43 @@
 ### 2.6 邊框
 
 `border-muted`（一般分隔線/卡片）／`border-toned`（需更明顯）／`border-accented`（強調/選取）。
+
+### 2.7 對比度基線（2026-07-24 首度實測定案）
+
+標準＝WCAG AA：**一般文字 4.5、大字與 UI 元件 3.0**。
+量測法＝computed style → 畫進 canvas 讀 sRGB → WCAG relative luminance。
+**對比是 sRGB 純數學、與螢幕無關**——換螢幕看起來深淺不同是面板體感，數字不會變；
+「同一頁兩個螢幕數字不同」＝其中一邊是舊版頁面，先重新整理。
+
+**已驗組合**（新增顏色組合前先對表；表上沒有就量了再用）：
+
+| 組合 | 對比 | 判定 |
+|---|---|---|
+| solid 主鈕 light：白字 on teal-550（base）／650（hover）／750（active） | **2.98**／4.59／6.39 | base ＝刻意接受例外（見下） |
+| solid 主鈕 dark：neutral-900 深字 on teal-450／550／650 | 8.37／5.96／**3.87** | base·hover ✅；active 為按住瞬間的過渡態，接受 |
+| solid 主鈕 dark：按鈕 450 對卡片底 `#18181b` | 8.36 | ✅（分離度） |
+| solid error 鈕：白字 on rose-600／700／800 | 4.53／6.03／— | ✅ |
+| 文字五階 on 白底：highlighted／default／toned／muted／dimmed | 17.75/10.30/7.56/4.84/**2.60** | 前四階 ✅；dimmed 見下 |
+| 表格深色表頭白字 | 10.30 | ✅ |
+| 白字 on teal-500／550／600 | 2.42／2.98／3.67 | ❌ 不得用於 solid 鈕文字 |
+| 白字 on rose-500／amber-550／emerald-600／sky-600 | 3.75／2.61／3.65／4.02 | ❌ 同上 |
+| 深字 on amber-550 | 6.8 | ✅（warning 若做 solid 鈕的唯一解） |
+
+**刻意接受的例外**：
+
+- **solid 主鈕 light base（白字 on teal-550）2.98**：過標候選 650／700 Steven 看過實畫面後
+  均嫌深，拍板好看優先（2026-07-24）。teal 亮階配白字物理上到不了 4.5——這是品牌色的
+  已知代價，**不得**引用本例外去開新的不及格組合（新組合仍走規則 1）。
+- **`text-dimmed` 2.60**：拉高會破壞 §2.5 五階層次。限最弱提示、角標；不得承載必要資訊。
+- **switch checked teal-500 對白底 2.42**：開關狀態由**滑塊位置**表達，顏色是冗餘線索。
+- **focus ring（`--ui-primary` 550）對白底 2.98**：差 3.0 線 0.02，現階段接受；日後動 `--ui-primary` 時順手校正。
+
+**規則**：
+
+1. **新做任何「語意色 solid 鈕」前先過上表**——白字達 4.5 才准上；不夠就換深階或改深字，不准硬上。
+2. **amber 永不配白字**（2.61）；warning 若需 solid 鈕一律深字。
+3. success／info 目前無 solid 鈕；要新增前先量。
+4. **`text-primary`（550，對白底 2.98）限強調色／標籤用途，不得當正文連結色**——正文超連結要另尋達 4.5 的方案。
 
 ---
 
@@ -819,6 +872,7 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 20. 頁面副標超過一句、塞機制說明、或放 `共 N 筆` 計數（見 §10.4）
 21. 表格排序各頁自刻 sortKey/accessors、前端分頁把排序套在切片「之後」、或有拖曳序位的表又給 column sort（見 §5.4.1）
 22. 自造平台名稱（在對外文案給平台第二個類別詞：workspace／gateway／platform），或登入頁放沒接資料的假狀態指示（見 §10.5）
+23. 新增顏色組合沒過 §2.7 對比度基線（solid 鈕白字未達 4.5、amber 配白字、text-primary 當正文連結色）
 
 ---
 
@@ -831,26 +885,10 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 - **vaul（UDrawer）殘留 transform 在 Windows 高 DPI 下文字糊**：只是桌面 devtools 模擬手機的假象、**真機正常**，不要為此加 `transform:none` 全域 hack。
 - **交易信的藍 `#2563eb` 不在平台語意色盤**（§2.2 的藍＝sky）。2026-07-23 Steven 決定維持現況——它是信件裡「要你動手」的專用色、不與 app 的 info 混用；日後要對齊 sky 隨時可換，兩封交易信一起改即可。
 - **信件 amber／rose 兩級尚未落地**：規則已定（§11.1），色值等第一封警告類／警示類信件出現時比照 §2.2 定。
-- **⚠️ solid 主鈕白字對比未達 WCAG AA（2026-07-23 實測，待 Steven 決定）**：
-  `vite.config.ts` 的 `text-white bg-primary-550`，實算 **2.98:1**——未達一般文字的 4.5:1，
-  也差一點點沒過 UI 元件的 3.0。hover 的 600 是 3.67:1 也沒過 AA，要到 active 的 **700（5.36:1）** 才合格。
-  這是 teal 色相本身偏亮造成的，不是選錯色。
-
-  | 階 | hex | 白字對比 | AA |
-  |---|---|---|---|
-  | teal-500（switch checked） | `#00bba7` | 2.42:1 | ❌ |
-  | **teal-550（主鈕 base）** | `#00a898` | **2.98:1** | ❌ |
-  | teal-600（hover） | `#009689` | 3.67:1 | ❌ |
-  | **teal-700**（現 active） | `#00786f` | **5.36:1** | ✅ |
-
-  三個選項：**A** base 改 teal-700（改的只有 solid 這個 variant，teal 識別仍活在
-  `text-primary`／outline／soft／focus ring／switch，整體不走味）／
-  **B** 維持 550 但改深字（`text-highlighted` on teal-550 ＝ 5.96:1 ✅）／
-  **C** 維持現狀列為已接受例外。**尚未決定。**
-- **`text-dimmed` 2.60:1 未達 AA**：用途是「最弱提示、角標」，拉高會破壞 §2.5 五階層次，
-  傾向**刻意接受**。其餘四階健康（4.84／7.56／10.30／17.75），表格深色表頭白字 10.30:1。
-- **本檔全文原本沒有任何對比度規範**：上面兩條是 2026-07-23 第一次實測才發現。
-  待補 §2.7 對比度基線（把驗過的組合與數字寫進去，新增顏色時有標準可對）。
+- ~~solid 主鈕白字對比未達 WCAG AA~~ **已結案（2026-07-24）**：light base 維持 550
+  （2.98，Steven 看過過標候選後拍板好看優先，列 §2.7 刻意接受例外）、hover/active 改
+  650/700；dark 改亮底深字（500，全過標）；error 鈕同輪明暗統一 600（light 原 3.75 → 4.53 ✅）。
+  規範落 §2.3＋§2.7，量測過程封存於 platform `prototype/primary-button-contrast` 分支。
 
 ---
 
