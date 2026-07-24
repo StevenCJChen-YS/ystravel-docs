@@ -84,7 +84,7 @@
 | 對象 | light | dark |
 |---|---|---|
 | 語意變數 `--ui-*`（`text-primary`／subtle・soft 標籤／focus ring／outline 主鈕） | primary(teal)、warning(amber) ＝**自訂 550 半階**；success／secondary／info ＝ 600；error(rose) 用預設 | **400** |
-| **solid 主鈕**（固定色階，**明暗拆階**，2026-07-24 拍板） | `bg-primary-550` 白字（2.98，**刻意接受例外**見 §2.7），hover/active → **650/700**（hover 原 600 改自訂 650 半階） | `bg-primary-500` **深字** `text-neutral-900`（7.32 ✅），hover/active → 550/600 |
+| **solid 主鈕**（固定色階，**明暗拆階**，2026-07-24 拍板） | `bg-primary-550` 白字（2.98，**刻意接受例外**見 §2.7），hover/active → **650/750** | `bg-primary-450` **深字** `text-neutral-900`（8.37 ✅），hover/active → **550/650** |
 | **solid error 鈕**（固定色階，明暗一致，2026-07-24） | `bg-error-600` 白字（4.53 ✅），hover/active → 700/800 | 同 light |
 | **switch checked**（固定色階，明暗一致） | `bg-primary-500` | 同 light |
 
@@ -93,18 +93,23 @@
 > 看過實畫面後否決），**拍板「好看優先」維持 550、列刻意接受例外**（teal 亮階配白字物理上
 > 到不了 4.5，見 §2.7）。dark 側則真正修好：700 明暗通用版對背景分離度腰斬（3.30）淘汰、
 > 550 深字版 active 越按對比越掉（3.31）淘汰，定案**亮底深字**（Material／Nuxt UI 官方同路線，
-> 官方 dark＝400 深字，我們取 500 較飽和且與 switch checked 同階）。各組合數字見 §2.7。
+> 官方 dark＝400 深字，我們取自訂 450 半階稍飽和）。最終梯度＝**「半階位整步跳」：
+> light 550→650→750、dark 450→550→650，dark 就是 light 整體亮一階**。各組合數字見 §2.7。
 
 **自訂半階的做法**（Nuxt UI `--ui-color-*` 別名只內建 50–950）——**兩套別名都要接**，缺一不生效
 （例外：650 只當 utility 用、沒被 `--ui-*` 引用，接 ① 即可）：
 
 ```css
 @theme {
+  --color-teal-450: oklch(74.05% 0.146 182.2);    /* oklch 插值取 400/500 中間（主鈕 dark base） */
   --color-teal-550: oklch(65.2% 0.129 183.604);   /* oklch 插值取 500/600 中間 */
-  --color-teal-650: oklch(54.6% 0.105 185.8);     /* ⚠️ 非中點：中點白字 4.41 差 0.09 不過 AA，取「最淺過標點」＝4.59（主鈕 light hover 用） */
+  --color-teal-650: oklch(54.6% 0.105 185.8);     /* ⚠️ 非中點：中點白字 4.41 差 0.09 不過 AA，取「最淺過標點」＝4.59 */
+  --color-teal-750: oklch(47.4% 0.087 187.3);     /* oklch 插值取 700/800 中間（主鈕 light active） */
   --color-amber-550: oklch(71.75% 0.1835 64.199);
-  --color-primary-550: var(--color-teal-550);      /* ① Tailwind utility 用（bg-primary-550） */
+  --color-primary-450: var(--color-teal-450);      /* ① Tailwind utility 用（bg-primary-450） */
+  --color-primary-550: var(--color-teal-550);
   --color-primary-650: var(--color-teal-650);
+  --color-primary-750: var(--color-teal-750);
   --color-warning-550: var(--color-amber-550);
 }
 :root {
@@ -157,9 +162,9 @@
 
 | 組合 | 對比 | 判定 |
 |---|---|---|
-| solid 主鈕 light：白字 on teal-550（base）／650（hover）／700（active） | **2.98**／4.59／5.36 | base ＝刻意接受例外（見下） |
-| solid 主鈕 dark：neutral-900 深字 on teal-500／550／600 | 7.32／5.96／4.83 | ✅ 全過 |
-| solid 主鈕 dark：按鈕 500 對卡片底 `#18181b` | 7.31 | ✅（分離度） |
+| solid 主鈕 light：白字 on teal-550（base）／650（hover）／750（active） | **2.98**／4.59／6.39 | base ＝刻意接受例外（見下） |
+| solid 主鈕 dark：neutral-900 深字 on teal-450／550／650 | 8.37／5.96／**3.87** | base·hover ✅；active 為按住瞬間的過渡態，接受 |
+| solid 主鈕 dark：按鈕 450 對卡片底 `#18181b` | 8.36 | ✅（分離度） |
 | solid error 鈕：白字 on rose-600／700／800 | 4.53／6.03／— | ✅ |
 | 文字五階 on 白底：highlighted／default／toned／muted／dimmed | 17.75/10.30/7.56/4.84/**2.60** | 前四階 ✅；dimmed 見下 |
 | 表格深色表頭白字 | 10.30 | ✅ |
