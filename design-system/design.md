@@ -171,6 +171,16 @@
 | 白字 on teal-500／550／600 | 2.42／2.98／3.67 | ❌ 不得用於 solid 鈕文字 |
 | 白字 on rose-500／amber-550／emerald-600／sky-600 | 3.75／2.61／3.65／4.02 | ❌ 同上 |
 | 深字 on amber-550 | 6.8 | ✅（warning 若做 solid 鈕的唯一解） |
+| **soft／subtle light**：文字 **700 階** on 同色相 `/10` 淡染底 | primary 4.81／success 4.73／warning 4.55／info 5.13／error 5.21 | ✅ **現行** |
+| **soft／subtle dark**：文字 400 階 on 同色相 `/10` 淡染底 | 5.40～8.48 | ✅（本來就達標，**不動**） |
+| soft 鈕 hover（底色轉 `/15`）：文字 700 階 | error 4.84 | ✅ |
+| ~~soft／subtle light：文字＝語意色本身（550/600）~~ | 2.38～3.56 | ❌ 2026-07-24 已修 |
+| soft／subtle light：文字 600 階 | 2.92～3.91 | ❌ 全數未過（success·info 本就是 600＝不動） |
+| soft／subtle light：文字 650 半階 | 3.64～4.52 | ❌ 僅 error 過 |
+
+> **為什麼 soft／subtle 非得用到 700 這麼深**：它的底色是**同色相 10% 淡染**＝一塊接近白的底，
+> 要在近白底上拿到 4.5，文字就必須是真的深色。這與 solid 鈕（深底白字）是相反的問題，
+> 不能拿 solid 的色階直覺套過來。
 
 **刻意接受的例外**：
 
@@ -187,6 +197,13 @@
 2. **amber 永不配白字**（2.61）；warning 若需 solid 鈕一律深字。
 3. success／info 目前無 solid 鈕；要新增前先量。
 4. **`text-primary`（550，對白底 2.98）限強調色／標籤用途，不得當正文連結色**——正文超連結要另尋達 4.5 的方案。
+5. **soft／subtle 一律「light 文字 700 階＋dark 維持 400 階」**，規則收在 `vite.config.ts` 的
+   badge／alert／button theme（`SOFT_TEXT` 一張表），**不准逐頁貼 class**。新元件若也吃
+   `bg-{color}/10 text-{color}` 這組官方預設，補進同一張表即可。
+6. **新增自訂半階一律取「最淺過標點」，不是數學中點**——`--color-teal-650` 就是這樣來的
+   （中點 L55.55% 白字 4.41 差 0.09 不過，往下取 L54.6%＝4.59）。**同名 token 只能有一套推導邏輯**：
+   要補 emerald／amber／sky／rose 的 650 就得照這條規則現場量，不可用插值省事
+   （2026-07-24 曾評估補齊四色 650，因只有 error 過標＋推導邏輯會分裂而作罷）。
 
 ---
 
@@ -873,6 +890,8 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 21. 表格排序各頁自刻 sortKey/accessors、前端分頁把排序套在切片「之後」、或有拖曳序位的表又給 column sort（見 §5.4.1）
 22. 自造平台名稱（在對外文案給平台第二個類別詞：workspace／gateway／platform），或登入頁放沒接資料的假狀態指示（見 §10.5）
 23. 新增顏色組合沒過 §2.7 對比度基線（solid 鈕白字未達 4.5、amber 配白字、text-primary 當正文連結色）
+24. soft／subtle 的文字色在業務頁自己貼 class，而不是收在 `vite.config` 主題層的 `SOFT_TEXT`；
+    或新增自訂半階用插值取中點而非「最淺過標點」（見 §2.7 規則 5、6）
 
 ---
 
@@ -882,13 +901,23 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 - **icon 執行期從 Iconify API 抓**：內網部署前要打包 lucide collection 進本地。
 - **Base token 是否抽成共用 npm 套件**：現階段先文件對齊，未來多系統重複痛了再抽（技術雷達 `@ystravel/ui`）。
 - **全站表單巡檢**（哪些 modal 還沒接 schema、哪些後端欄位錯誤還在走 toast）＝獨立一輪，未排程。
+- **業務頁直接寫 `text-{語意色}` 共 24 處／14 檔，尚未逐一判定**（2026-07-24 掃出，與 §2.7 規則 5
+  是同一個病灶但**不能一刀切**）：`text-primary` 8、`text-error` 8、`text-warning` 5、`text-success` 3。
+  難處在於**門檻不同**——其中一部分是圖示（`PageHeader`／`ModuleRail`／`TableLoading` 的 spinner，
+  UI 元件門檻 3.0），另一部分是真的文字訊息（`ConfirmModal` 警語、`AccountSecurityPage` 錯誤提示、
+  `WorkCalendarPage` 警示，門檻 4.5）。要逐處看背景與用途才能決定改哪些、哪些列例外。
+  ⚠️ 注意 `text-primary` 對白底是 2.98，**連 UI 元件的 3.0 都差 0.02**（同 focus ring 那條例外）。
 - **vaul（UDrawer）殘留 transform 在 Windows 高 DPI 下文字糊**：只是桌面 devtools 模擬手機的假象、**真機正常**，不要為此加 `transform:none` 全域 hack。
 - **交易信的藍 `#2563eb` 不在平台語意色盤**（§2.2 的藍＝sky）。2026-07-23 Steven 決定維持現況——它是信件裡「要你動手」的專用色、不與 app 的 info 混用；日後要對齊 sky 隨時可換，兩封交易信一起改即可。
 - **信件 amber／rose 兩級尚未落地**：規則已定（§11.1），色值等第一封警告類／警示類信件出現時比照 §2.2 定。
 - ~~solid 主鈕白字對比未達 WCAG AA~~ **已結案（2026-07-24）**：light base 維持 550
   （2.98，Steven 看過過標候選後拍板好看優先，列 §2.7 刻意接受例外）、hover/active 改
-  650/700；dark 改亮底深字（500，全過標）；error 鈕同輪明暗統一 600（light 原 3.75 → 4.53 ✅）。
+  650/750；dark 改亮底深字（450，全過標）；error 鈕同輪明暗統一 600（light 原 3.75 → 4.53 ✅）。
   規範落 §2.3＋§2.7，量測過程封存於 platform `prototype/primary-button-contrast` 分支。
+- ~~soft／subtle 文字對比未達 WCAG AA~~ **已結案（2026-07-24）**：徽章／Alert／soft 鈕的文字
+  在 light 一律壓 700 階（2.38～3.56 → 4.55～5.21），底色與 dark 不動。600 階經實測無效
+  （0/5 過標）、650 半階只有 error 過，故直接到 700。規則落 §2.7 規則 5＋§13-24。
+  這是比主鈕更嚴重的一區——**徽章承載狀態資訊（在職／邀請中／啟用），不是裝飾**。
 
 ---
 
