@@ -270,7 +270,10 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 - 前兩種是同一件事的兩個斷點（平鋪版存在、只是排不排得下）；`always-visible` 是另一回事。
 - **不要把 `inline-from` 套到「套用才查」的頁**——平鋪版沒有套用鈕，等於每動一個下拉就掃一次大表。
 - `FilterPanel` 本身 RWD 分流：`<sm` 底部 `UDrawer`／`≥sm` `UModal`。草稿流程由頁面持有：`@open` 拷真值進草稿、`@apply` 才寫回。
-- **動作鈕貼著表格，不要放到很遠的頁首**（比照 Vuetify data-table CRUD，而非 Polaris 頁首 primaryAction）。
+- **動作鈕分兩層**（2026-07-24 依實作校正原「一律貼著表格」的說法）：
+  ①**頁面主要動作（新增／匯入等）→ `PageHeader` 的 `#actions`**（標題同行右邊，用 `ToolbarButton`）——全站一致（使用者、角色、工作日曆皆此擺法）。
+  ②**列內／表格層的 CRUD（每列編輯刪除、欄位顯示、調整順序）→ 貼著表格**（`DataToolbar #actions` 或列尾），別把這些堆到頁首。
+  （原文「動作鈕不要放頁首」易被讀成「連主要動作都不能放頁首」，與 roles/users 現況不符，故校正。）
 
 **條件多到排不下時，先量再決定斷點**——用 `getBoundingClientRect` 量工具列那一列的寬度與 `top`（`top` 出現兩種值＝已經換行了），別憑感覺挑。
 
