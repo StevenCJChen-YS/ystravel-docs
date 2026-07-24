@@ -426,6 +426,16 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 - **label 與 value 要拉開層級**：label `text-xs text-muted` 固定寬、value `text-sm font-medium text-highlighted`。
   兩者同字重只差顏色時，掃視會糊成一片、眼睛沒有著陸點。
 - **手機維持 label／value 同一行**（不要上下堆疊），比堆疊更矮。
+- **⚠️ 長值（email 等無空白字串）要不撐破版面，「列」與「value」都要 `min-w-0`，缺一不可**：
+  ①列是 grid item，`min-width:auto` 使其最小尺寸＝內容 min-content，
+  grid 欄會被撐到比容器還寬（實測欄 328.7px vs 容器 285px）
+  ②value 是 flex item，同樣不會縮到小於內容寬。
+  `break-words`（`overflow-wrap:break-word`）**只在排版時允許斷字、不會縮小 min-content**，單靠它救不了。
+
+> **⚠️ 這類溢出用 `scrollWidth > clientWidth` 驗不出來**——元素會自己撐大，兩者永遠相等。
+> 正確驗法＝比對「**右緣是否超出容器內容框**」。2026-07-24 因此誤報過一次「沒有溢出」，
+> 實機才被 Steven 抓到被切掉。附帶：該 email 在 375px 下恰好 197px、可用寬也恰好 197px，
+> **零餘裕**——這種「剛好塞得下」在不同裝置的字體渲染下必然翻車，量到剛好就要當成不合格。
 
 > **⚠️ 多值欄位一律跨整列（`sm:col-span-2`），不參與兩欄配對。**
 > 多值＝角色、標籤、分眾這類「數量不固定的徽章清單」（§5.4 已把它列為不給排序的欄型，同一個分類）。
