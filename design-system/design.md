@@ -166,6 +166,28 @@
 >（hover、選取態、active nav、卡內次層帶），但**表面層級一律走上表三個 token**。
 > ⚠️ 卡片不要用 `bg-elevated`：light 的 `bg-elevated` 與頁面底同值，卡片會糊進頁底（2026-07-10 實測）。
 
+**狀態底色在 dark 整體推一階（2026-07-24，跟著表面層級一起調）**：
+
+| token | 官方 dark 值 | 本站 dark | 對卡片分離度 |
+|---|---|---|---|
+| `bg-muted`（凹一層） | 800 | **900** | 1.000 → **1.189** |
+| `bg-elevated`（浮一層） | 800 | **700** | 1.000 → **1.428** |
+| `bg-accented`（選取態） | 700 | **600** | 1.428 → 1.929 |
+
+**為什麼**：卡片改成 `neutral-800` 之後，官方 dark 的 `bg-muted` 與 `bg-elevated`
+**本來就都是 `neutral-800`**——於是它們在卡片上變成**逐位元同色**，三個狀態階裡有兩個失去語意。
+症狀：稽核詳情的原始資料區整塊看不見；拖曳區 hover 是官方的 `hover:bg-elevated/25`，
+方向等於「朝卡片的顏色靠過去」，**越 hover 越融合**。
+`accented` 必須跟著推，否則會跟新的 `elevated` 撞在 700。改後 `hover:bg-elevated/25`
+疊在卡片上＝分離 1.086（hover 本來就該微妙）。**只動 dark**，light 沒有這個問題。
+
+> ⚠️ **不能只改用到的那幾頁**：`hover:bg-elevated` 是 **Nuxt UI 元件內部**在用的
+> （拖曳區／下拉選項／選取 pill／排序鈕…），逐頁貼補丁救不了，而且會製造一批散落的硬寫色。
+>
+> ⚠️ **狀態 token 不可拿來當表面用**（§13-29 擋件）。`UserIdentityCard` 的 hero 名片與
+> 稽核原始資料區原本就是這樣寫的，2026-07-24 已改走 `--app-surface-*`。
+> 判準：**這塊東西會不會因為 hover／選取而改變？** 不會＝表面，走 `--app-surface-*`。
+
 ### 2.5 文字灰階
 
 一律用 semantic token，下表 light 值供對照（dark 由 token 自動翻低階變亮）：
@@ -1048,6 +1070,8 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
     或用 `scrollWidth > clientWidth` 當溢出檢查（元素自己撐大，永遠驗不出來）——見 §4.3
 28. 為了「星空底上太淡」逐處貼 `aurora:text-muted`／`aurora:text-toned`——極光的文字提亮
     已收在 `main.css` 的 `.dark.theme-aurora` token，全站自動生效（見 §9.2）
+29. 拿狀態 token（`bg-muted`／`bg-elevated`／`bg-accented`）當**表面**用——表面一律走
+    `--app-surface-*`。判準：這塊東西會不會因為 hover／選取而改變？不會＝表面（見 §2.4）
 
 ---
 
