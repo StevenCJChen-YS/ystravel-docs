@@ -739,6 +739,43 @@ dashboard panel 的 body——`window.scrollTo` / `window.scrollY` / `useWindowV
 
 **維護心法**：改 aurora 顏色 → 只動 `main.css` token 區塊；新卡片/表格 → 用 `SurfaceCard`/`TableFrame`/`TableCard`，別貼長字串。
 
+### 9.2 極光下的文字對比（2026-07-24 逐像素掃描後定案）
+
+**極光下文字階整體提亮一階**，規則收在 `main.css` 的 `.dark.theme-aurora`：
+
+```css
+--ui-text-muted:  var(--ui-color-neutral-300);  /* 原 400 */
+--ui-text-dimmed: var(--ui-color-neutral-400);  /* 原 500 */
+```
+
+**不要再逐處貼 `aurora:text-muted`／`aurora:text-toned`**（§13-28 擋件）——
+`AppShell` 的 icon／分組小標與 `EmptyState` 的 avatar icon 原本各自貼補丁做同一件事，
+2026-07-24 已收進 token 並移除，視覺不變。
+
+**為什麼需要**：極光背景層是 `fixed inset-0`，**亮光帶永遠釘在畫面上方三分之一、不隨捲動離開**，
+所有內容都會從它底下經過——那正好是閱讀時視線停留的位置，不是「頁面頂端的一小塊」。
+掃描（動畫取峰值、含毛玻璃 24px blur、扣掉 header 的內容區）：
+
+| 文字階 | 改前 最差／不過標面積 | 改後（玻璃 40%） |
+|---|---|---|
+| highlighted | 4.21／1.8% | **4.44／0.4%** |
+| default | 3.32／4.4% | 3.50／3.9% |
+| toned | 2.85／8.0% | 3.01／6.4% |
+| **muted** | **1.61／22.1%** | **3.01／6.4%** |
+| dimmed | 1.00／100% | 1.69／19.8% |
+
+**單靠玻璃不透明度救不了**——達 4.5 所需的最低不透明度：white 41%／default 51%／toned 57%／
+**muted 80%**／**dimmed 即使 100% 也不夠**（`neutral-500` 對 `neutral-900` 本身只有約 3.0）。
+80% 等於看不見星空，主題就白做了。
+
+> **刻意接受的例外**：最亮光帶上仍有約 6% 面積讓 toned／muted 不到 4.5，`dimmed` 則約 20%。
+> 那是半透明玻璃壓在發亮漸層上的固有結果（要歸零得把玻璃拉到 57% 以上）。
+> `dimmed` 與 §2.7 既有的 dimmed 例外同一條理由：限最弱提示、**不得承載必要資訊**。
+> 日後若覺得亮帶處仍糊，下一個有意義的點是玻璃 **45%**（白字歸零、muted 降到 4.7%），改一個數字即可。
+
+> 附帶：`--aurora-panel` 原本的 38% **不是為這片極光調的**——2026-07-16 從另一個專案
+> my-apps 的 `AppPageLayout glass` 直接沿用。所以它沒有「原本的理由」需要保護。
+
 ---
 
 ## 10. 文案與格式
@@ -980,6 +1017,8 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 26. 定義列把多值欄位（角色／標籤／分眾）放進兩欄配對，而不是 `sm:col-span-2` 跨整列（見 §5.5.1）
 27. UI 改動沒在 **375px** 看過；或用「鎖元素寬度」代替真的調視窗（`sm:` 斷點不會觸發，量測無效）；
     或用 `scrollWidth > clientWidth` 當溢出檢查（元素自己撐大，永遠驗不出來）——見 §4.3
+28. 為了「星空底上太淡」逐處貼 `aurora:text-muted`／`aurora:text-toned`——極光的文字提亮
+    已收在 `main.css` 的 `.dark.theme-aurora` token，全站自動生效（見 §9.2）
 
 ---
 
