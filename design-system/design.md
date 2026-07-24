@@ -120,20 +120,51 @@
 
 > ⚠️ `--ui-*` 未分層寫在 `:root` 會洩漏到 dark，故 `.dark` 要補回 400 抵銷。
 
-### 2.4 中性底色分層
+### 2.4 表面層級（2026-07-24 重訂，取代原「中性底色分層」）
 
-| Token | 用途 |
-|---|---|
-| `bg-default` | sidebar、header、**內容區的卡片/面板（白卡）** |
-| `bg-muted` | hover、次層背景、頁面底 |
-| `bg-elevated` | **白卡上的次層帶**（卡片 header 底） |
-| `bg-accented` | 選取態、active nav、當前項目 |
+**全站只有三層表面，一律引用 token，禁止各頁再寫 `dark:bg-neutral-8xx`（§13-25 擋件）：**
 
-**層次＝頁面底 muted 灰 → 卡片 `bg-default` 白 → 卡內次層帶 `bg-elevated`。**
+| Token | 用在哪 | light | dark |
+|---|---|---|---|
+| `--app-surface-page` | AppShell 內容區底（卡片後面那層） | neutral-100 | neutral-950 |
+| `--app-surface-card` | 卡片（`SurfaceCard`）、殼件（header／drawer）、modal | `#fff` | neutral-800 |
+| `--app-surface-inset` | 卡片**裡面**的區塊（帳號中心的內卡等） | neutral-50 | neutral-900 |
 
-> ⚠️ **卡片不要用 `bg-elevated`**：light mode 的 `bg-elevated` 與頁面底色同值，卡片會糊進頁底（2026-07-10 實測）。dark mode 同一組 token 自動成立。
+用法：`class="bg-[var(--app-surface-card)]"`。定義在 platform `apps/portal/src/assets/css/main.css`。
 
-**表格 thead 另採深色表頭白字**：light `neutral-700`、dark `neutral-850`；斑馬紋偶列 `bg-muted`（dark `neutral-800`）、奇列走卡底（dark `neutral-900`）——不走 `bg-elevated`。
+**為什麼重訂**：原本 850／950 被混用在不同語意上（850 同時當卡片、深色表頭、modal；
+950 同時當內容區底與欄位），實測結果是**全站其實只有一個表面層級**——
+三層容器套疊時色值完全相同，「內卡 vs 外卡」明暗兩邊都是 **1.00（逐位元同色）**，
+巢狀讀起來只是邊框在疊；卡片對頁面也只有 light 1.05／dark 1.17。
+連帶症狀：輸入框與內容區底同為 neutral-950，卡片上的欄位看起來像被打了一個直通頁面的洞。
+
+**相鄰層分離度（真實元件實測）**：
+
+| | light | dark |
+|---|---|---|
+| card vs page | 1.05 → **1.10** | 1.17 → **1.34** |
+| inset vs card | 1.00 → **1.05** | 1.00 → **1.19** |
+
+> **light 拉不高是物理限制**，近白表面之間擠不出明度差——淺色靠的是邊框與陰影，
+> 不要為了追數字把淺色頁面底壓深。淺色的層次感主要來自「內卡不與外卡同色」這個結構修正。
+
+**規則**：
+
+1. **`inset` 不可直接疊在 `inset` 上**（會退回 1.00 的老問題）。需要再深一層＝回來重新檢討層級。
+2. **⚠️ token 一律引用 `--ui-color-neutral-*`，不可用 `--color-neutral-*`**——後者明暗都是 gray、
+   從未被重新指向，只有前者會在 `.dark` 被換成 zinc。寫錯的話深色會變成帶藍調的 gray
+   （實測 `rgb(3,7,18)`），違反 2026-07-11「dark 走 zinc 免得偏 navy」的拍板，
+   **而且淺色完全正常、不會被發現**。
+3. **井底層（輸入框／`TableFrame`／`OrderManager`）刻意不納入這三個 token**，維持 light 白／dark `neutral-950`：
+   ①它與 page 同值可接受——兩者永遠不相鄰（井底一定在卡片內、page 一定在卡片外）
+   ②`TableFrame` 的斑馬紋在 dark 正是 `neutral-900`，把框底改成 `inset(900)` 斑馬紋會直接消失。
+   原本「欄位像挖了個洞」的觀感，卡片提到 800 後井底對卡片拉到 1.34，就會讀成刻意的凹槽。
+4. **表格 thead 是深色標題帶、不是表面層**，維持 light `neutral-700`／dark `neutral-850`；
+   斑馬紋偶列 `bg-muted`（dark `neutral-900`，對框底 1.12）。
+
+> Nuxt UI 原生的 `bg-default`／`bg-muted`／`bg-elevated`／`bg-accented` 仍用於**狀態**
+>（hover、選取態、active nav、卡內次層帶），但**表面層級一律走上表三個 token**。
+> ⚠️ 卡片不要用 `bg-elevated`：light 的 `bg-elevated` 與頁面底同值，卡片會糊進頁底（2026-07-10 實測）。
 
 ### 2.5 文字灰階
 
@@ -384,6 +415,25 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 - **數字給人看一律 1-based**（`order + 1`），0-based 只留程式內。
 - 後端 reorder 端點收「排好的 id 陣列」→ 交易重編 0,1,2… ＋ audit。
 - UI＝**modal**（工具列「調整順序」鈕開），清單窄單欄 `max-w-2xl`、可捲、序號 1-based 徽章。
+
+### 5.5.1 定義列（唯讀資料的 `dl`，2026-07-24 新增）
+
+唯讀資料頁（帳號中心個人資料等）的欄位陳列：
+
+- **單值欄位配成兩欄**（`sm:grid-cols-2`），`sm` 以下自動回單欄。
+  8 個欄位一行一個會拉出很長的卡片、右側整片留白；配對後高度直接砍半
+  （實測任職資料卡 512px→269px，桌機省 47%、手機 704→448 省 36%）。
+- **label 與 value 要拉開層級**：label `text-xs text-muted` 固定寬、value `text-sm font-medium text-highlighted`。
+  兩者同字重只差顏色時，掃視會糊成一片、眼睛沒有著陸點。
+- **手機維持 label／value 同一行**（不要上下堆疊），比堆疊更矮。
+
+> **⚠️ 多值欄位一律跨整列（`sm:col-span-2`），不參與兩欄配對。**
+> 多值＝角色、標籤、分眾這類「數量不固定的徽章清單」（§5.4 已把它列為不給排序的欄型，同一個分類）。
+> 理由不只是自己會擠：**CSS grid 同列等高，多值欄一膨脹會把隔壁的單值欄一起撐高**，
+> 下方留一大片空白。實測 6 個角色在半欄折成 3 行、把隔壁「公司信箱」撐到 109px；
+> 跨整列後 6 個角色一行放得下、列高 49px，**整個區塊反而更矮**。
+> 一個帳號可跨模組掛多個角色（`UserRole` 多對多、`Role` 各綁一個模組），這不是極端情境。
+> CRM 的客戶標籤／分眾是同一個形狀且數量更多，比照辦理。
 
 ### 5.6 容器範式：modal／整頁／drawer（2026-07-23 新增）
 
@@ -892,6 +942,9 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 23. 新增顏色組合沒過 §2.7 對比度基線（solid 鈕白字未達 4.5、amber 配白字、text-primary 當正文連結色）
 24. soft／subtle 的文字色在業務頁自己貼 class，而不是收在 `vite.config` 主題層的 `SOFT_TEXT`；
     或新增自訂半階用插值取中點而非「最淺過標點」（見 §2.7 規則 5、6）
+25. 表面底色寫死 `dark:bg-neutral-8xx` 而不走 `--app-surface-*` token；`inset` 直接疊在 `inset` 上；
+    或 token 引用 `--color-neutral-*`（明暗都是 gray）而非 `--ui-color-neutral-*`（見 §2.4）
+26. 定義列把多值欄位（角色／標籤／分眾）放進兩欄配對，而不是 `sm:col-span-2` 跨整列（見 §5.5.1）
 
 ---
 
