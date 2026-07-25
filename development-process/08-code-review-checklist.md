@@ -25,6 +25,63 @@ Review 分成**兩個獨立的軸**,分別跑、**結果不合併、不重新排
 
 ---
 
+## 怎麼實際跑(2026-07-25 定案)
+
+**`/code-review` 是 Claude Code 內建指令,它只看得到 working diff——不知道 `prd.md`
+在哪、不知道 `.feature` 在哪、不知道這個專案有五條鐵則。** 直接喊 `/code-review`
+只會拿到「通用的程式碼意見」,兩軸都不成立。判準要每次明確餵進去。
+
+### 兩軸各餵哪幾份
+
+| 軸 | 一定要餵 | 有才餵 |
+|---|---|---|
+| **Spec** | `ystravel-platform/docs/features/<slug>/prd.md`、對應模組的 `<slug>.feature` | `docs/features/<slug>/tickets/NN-*.md`(大尺寸才有) |
+| **Standards** | `ystravel-platform/CLAUDE.md`(五條鐵則)、`docs/design-system/design.md` **§13 擋件清單**、本檔 C~F 段 | `ystravel-platform/CONTEXT.md`(有新術語時)、`docs/process/SECURITY_AND_ISO27001_BASELINE.md`(碰個資/權限時) |
+
+**Standards 軸不要餵整份 `design.md`**(它很長,會把 diff 稀釋掉)——餵 §13 擋件清單,
+真的要查某條規則的細節再讓它自己去讀對應章節。
+
+### 可以直接複製的兩支 prompt
+
+```text
+[Spec 軸]
+只做一件事:檢查這份 diff 有沒有忠實做到當初講好的事。
+判準來源只有這些,不要引用其他標準:
+  - docs/features/<slug>/prd.md 的 Acceptance Criteria
+  - <path>/<slug>.feature 的每一條 scenario
+逐條對照,每個發現都要引用出處(哪一條 scenario、PRD 第幾點)。
+特別找:漏掉的 scenario、只做 happy path、漏權限檢查、以及 scope creep
+(做了 PRD/票沒要求的東西)。
+不要評論程式風格、命名、效能——那是另一軸的事。
+```
+
+```text
+[Standards 軸]
+只做一件事:檢查這份 diff 寫得好不好、合不合規矩。
+判準來源:
+  - ystravel-platform/CLAUDE.md 的五條鐵則(模組邊界/資料主權/防腐層/前端分層/不預先造基礎設施)
+  - docs/design-system/design.md §13 Code Review 擋件清單
+  - docs/development-process/08-code-review-checklist.md 的 C~F 段
+硬性違規與判斷題要分開標。工具(lint/type-check)已經擋掉的一律略過。
+不要評論「有沒有做到需求」——那是另一軸的事。
+```
+
+### 沒有 `.feature`／`prd.md` 的時候(中等與微改尺寸)
+
+§3 說「中等」尺寸跳過 to-tickets、快速走完,所以**多數改動根本沒有 `.feature`**,
+Spec 軸會沒有判準來源。這時候**不是省掉 Spec 軸**,而是換判準:
+
+> **Spec 軸退回「PR 描述 vs diff」**:PR 描述說要做的事,跟 diff 實際做的事一致嗎?
+> 有沒有 diff 做了但描述沒提的改動(= scope creep)?有沒有描述說了但 diff 沒做到的?
+
+理由:**scope creep 是這種尺寸最常出的問題**,而它只有 Spec 軸抓得到——Standards 軸
+看每一處改動都「寫得很好」,不會問「這處為什麼要改」。而且 PR 描述本來就是簽核前
+唯一會被完整讀過的東西,拿它當契約剛好。
+
+⚠️ 反過來說:**PR 描述含糊到無法當判準,本身就是一個 Spec 軸發現**。
+
+---
+
 ## Spec 軸
 
 - [ ] 是否完整覆蓋對應 `.feature` 的**所有** scenario?
@@ -138,6 +195,7 @@ Review 分成**兩個獨立的軸**,分別跑、**結果不合併、不重新排
 | 每個 scenario 都產新 step | Step definition 難維護 | 建立共用 domain language(見 `CONTEXT.md`) |
 | 把所有測試都塞進 BDD | 測試變慢、難 debug | Unit/Integration/BDD/E2E 分層(見 07) |
 | 兩軸混在一起 review | 一軸的問題被另一軸蓋掉 | 分開跑、分開報告,不合併 |
+| 直接喊 `/code-review` 沒餵判準 | 只拿到通用程式碼意見,兩軸都不成立 | 每次明確餵判準檔案(見本檔 §怎麼實際跑) |
 | 一個 session 做完整個功能 | context 髒掉,開始改到不相關的檔案 | 每張票一個全新 session(見 00 §3) |
 | 沒有 CI gate | AI 產碼風險無法控管 | PR 必跑 lint/test/build |
 | 沒有人類 review | 錯誤可能看起來很合理 | 即使一人團隊,也要用這份 checklist 自我審查 |
