@@ -92,7 +92,40 @@ AI 的 context window 有限,而且接近上限時推理品質會下降(約 120K
 
 **唯一不能省的紀律:每張票開一個全新 session。**
 
-每個步驟對應的模板:
+### 多 session 並行(2026-07-25 定案)
+
+上面講的是「一條線的 session 怎麼切」。實務上還有另一個問題:**能不能同時開兩個
+session 做不同的事**?能,但形狀要固定。
+
+**形狀 = 一前台 + 一後台,上限兩場。**
+
+| 場 | 吃什麼 | 典型工作 |
+|---|---|---|
+| **前台** | Steven 的注意力 | `/grill-with-docs`、UI 逐項調、驗收 |
+| **後台** | 自己跑,只在做完時回報 | 照票 `/implement`、寫測試、寫文件 |
+
+**三場以上不要開。** 那會讓 Steven 變成「在視窗之間切換的人」,每場都只給得出片段的
+注意力,品質反而比一場一場做還差。
+
+**五條規則:**
+
+1. **開工先宣告領土**——會動哪些檔、**明確不動哪些**,寫進 commit message 或 PR 描述。
+   「明確不動」比「會動」更重要:它才是另一場判斷有無衝突的依據。
+2. **各自 feature 分支,PR 逐一合**,不要兩場共用一支分支。
+3. **共用文件寫前先 pull,後合的負責解衝突**。共用文件 = `CONTEXT.md`、
+   `design-system/design.md`、`my-agent/MEMORY.md`、當日 `daily/`。
+4. **PR 合併後,要主動跟還開著的另一場說「main 更新了,pull」**。
+   AI 不會自己知道 main 前進了——它只在開場 pull 過一次。
+5. **daily 各寫各的章節**,標明是哪一條線,不改別場寫的段落。
+
+> **活教材(2026-07-24)**:「平台命名收斂」與「主鈕對比度」兩場並行,沒撞到靠的正是
+> 前四條。命名場的 commit 訊息寫了「明確不動 `HomePage`、`accessible-systems.ts`」,
+> 對比場才敢直接判定無衝突、不必停下來問。若當時只寫了「動了哪些」,對比場就只能猜。
+
+**git worktree 現階段不引入**。成本(多一份工作目錄、node_modules、環境變數)大於效益;
+等真的出現「兩場非得同時改同一 repo 的重疊區」再說。目前靠分支 + 領土宣告就夠。
+
+### 每個步驟對應的模板
 
 | 步驟 | 模板 |
 |---|---|
@@ -112,8 +145,8 @@ AI 的 context window 有限,而且接近上限時推理品質會下降(約 120K
 
 | Session | 指令 | 做什麼 |
 |---|---|---|
-| 1 | `/grill-with-docs` | 一次問一題逼問到對齊,同時維護 `CONTEXT.md` 與 ADR |
-| 1 | `/feature-kickoff` | 接著產 PRD / example mapping / .feature |
+| 1 | `/grill-with-docs` | 一次問一題逼問到對齊,同時維護 `CONTEXT.md` 與 ADR。**唯一「問」的地方**(見下) |
+| 1 | `/feature-kickoff` | 把 grill 的結論寫成 PRD / example mapping / .feature,**不重跑 discovery** |
 | 2 | `/feature-kickoff` | 產 SA / SD |
 | 2 | `/to-tickets` | 切成垂直切片票(只有「大」尺寸才需要) |
 | 3..N | `/implement` | 照票實作,內部驅動 BDD/TDD |
@@ -121,7 +154,32 @@ AI 的 context window 有限,而且接近上限時推理品質會下降(約 120K
 | 3..N | `/tdd` | `implement` 內部驅動的 red-green 迴圈 |
 | 視需要 | `/prototype` | 版面或狀態機講不清時,做丟棄式多版本比較(見 10) |
 
-`/code-review` 是 **Claude Code 內建指令,不是 skill**,不用裝。
+`/code-review` 是 **Claude Code 內建指令,不是 skill**,不用裝(怎麼餵它判準見 [08](./08-code-review-checklist.md) §怎麼實際跑)。
+
+### Session 1 兩支 skill 的邊界:grill 問、kickoff 寫(2026-07-25 定案)
+
+Session 1 有兩支 skill,**分工是「誰負責問」與「誰負責寫」,不是流程的前後兩半**:
+
+| skill | 職責 | 產出 |
+|---|---|---|
+| `/grill-with-docs` | **唯一「問」的地方** | 對齊後的理解、`CONTEXT.md` 詞彙、ADR |
+| `/feature-kickoff` | **「寫」**:把 grill 的結論落成文件 | `prd.md`、`example-mapping.md`、`<slug>.feature` |
+
+**問題是這兩支本來會重複問一輪。** `feature-kickoff` Step 1 明文要「conversationally 問
+discovery questions」——解決什麼問題、誰用、完成長怎樣、UI/UX 期待,而這四題 grill 一定
+已經逼問過。Steven 被同一組問題問兩次,第二次還會覺得「剛剛不是講過了」。
+
+**約定:**
+
+1. **grill 要問完 PRD 需要的全部輸入**,不只問架構取捨。包含 `01-prd-template.md` 的
+   使用者、完成定義、驗收標準,以及 **§7 資安與資料分級**(這欄最容易被 grill 漏掉,
+   因為它不像「決策」而像「表格」——但它不是選填)。
+2. **kickoff 不重跑 discovery**。同一個 session 內已經跑過 grill 的話,Step 1 直接把
+   grill 的結論寫成 PRD 草稿給 Steven 看。
+3. **缺口要明說是缺口**。grill 沒覆蓋到的欄位,kickoff 補問時要講「這題 grill 沒問到」,
+   不要混在一堆問題裡重問一遍——Steven 才分得出「你沒在聽」與「這題真的還沒談」。
+4. **反過來也成立**:grill 是**通用**逼問工具(也用於純架構決策、非功能討論),
+   不綁定功能開發。所以不把 PRD 產出塞進 grill 本身,`prd.md` 一律由 kickoff 寫。
 
 > ⚠️ **`/wayfinder` 尚未安裝**(給「連要做什麼都講不清」的大工程用,例如 W3 SP 團系統)。
 > 它重度依賴 issue tracker,要用之前得先適配,屆時再說。
