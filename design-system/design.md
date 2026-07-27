@@ -184,7 +184,7 @@
 > ⚠️ **不能只改用到的那幾頁**：`hover:bg-elevated` 是 **Nuxt UI 元件內部**在用的
 > （拖曳區／下拉選項／選取 pill／排序鈕…），逐頁貼補丁救不了，而且會製造一批散落的硬寫色。
 >
-> ⚠️ **狀態 token 不可拿來當表面用**（§13-29 擋件）。`UserIdentityCard` 的 hero 名片與
+> ⚠️ **狀態 token 不可拿來當表面用**（§13-32 擋件）。`UserIdentityCard` 的 hero 名片與
 > 稽核原始資料區原本就是這樣寫的，2026-07-24 已改走 `--app-surface-*`。
 > 判準：**這塊東西會不會因為 hover／選取而改變？** 不會＝表面，走 `--app-surface-*`。
 
@@ -504,13 +504,13 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 
 > **⚠️ 以前放錯 slot 看不出來。** 舊版兩個 slot 最後都被推到右邊，選錯沒有視覺後果；
 > 2026-07-25 改成按功能分組後才現形，一口氣冒出一批。Review 時「這顆鈕放哪個 slot」
-> 現在是有標準答案的（§13-30）。
+> 現在是有標準答案的（§13-33）。
 
 **適用範圍＝走 `DataToolbar` 的表格工具列。**
 
 - **日曆導覽列不套**：月份 prev/next/今天 是**導覽**不是篩選，業界慣例（Google Calendar）
   就是導覽靠左、視圖控制靠右。硬套會變成全部靠左、右邊整片空白。
-- **不要手刻工具列版面**（§13-31）。稽核紀錄曾自己刻了一份與 `DataToolbar` 逐字相同的結構，
+- **不要手刻工具列版面**（§13-34）。稽核紀錄曾自己刻了一份與 `DataToolbar` 逐字相同的結構，
   結果整輪改動它一點都沒吃到——2026-07-25 已改用共用元件。
 
 **區塊層級小標題的細則**：`OptionsManager` 這種「一個頁面裡多個區塊、各有自己小標題」的版面，
@@ -908,7 +908,7 @@ dashboard panel 的 body——`window.scrollTo` / `window.scrollY` / `useWindowV
 > **這兩個中點值刻意不照 §2.7 規則 6 的「最淺過標點」推導**——那條規則是為了讓組合過 AA，
 > 而這裡的目的是**層次間距**，且極光下本來就過不了。取中點才能讓五階等距。
 
-**不要再逐處貼 `aurora:text-muted`／`aurora:text-toned`**（§13-28 擋件）——
+**不要再逐處貼 `aurora:text-muted`／`aurora:text-toned`**（§13-31 擋件）——
 `AppShell` 的 icon／分組小標與 `EmptyState` 的 avatar icon 原本各自貼補丁做同一件事，
 2026-07-24 已收進 token 並移除，視覺不變。
 
@@ -1200,15 +1200,20 @@ Steven 的決策範圍（同「面向全員的文案／命名先拍板」的通�
 29. 沒走 `PageHeader` 的副標漏掉 `max-sm:hidden` / `line-clamp-1` / `text-muted` 三件之一（見 §10.4）
 30. 載入狀態自己刻：只給純文字（跟當掉的畫面無法分辨）、只給 spinner 不給文字、
     文案加刪節號、或沒用 `LoadingState`／`USkeleton` 而手寫（見 §8.1.1）
-28. 為了「星空底上太淡」逐處貼 `aurora:text-muted`／`aurora:text-toned`——極光的文字提亮
+31. 為了「星空底上太淡」逐處貼 `aurora:text-muted`／`aurora:text-toned`——極光的文字提亮
     已收在 `main.css` 的 `.dark.theme-aurora` token，全站自動生效（見 §9.2）
-29. 拿狀態 token（`bg-muted`／`bg-elevated`／`bg-accented`）當**表面**用——表面一律走
+32. 拿狀態 token（`bg-muted`／`bg-elevated`／`bg-accented`）當**表面**用——表面一律走
     `--app-surface-*`。判準：這塊東西會不會因為 hover／選取而改變？不會＝表面（見 §2.4）
-30. 工具列控件放錯 slot（篩選放 `#actions`／動作放 `#filters`），或把「新增／匯入」
+33. 工具列控件放錯 slot（篩選放 `#actions`／動作放 `#filters`），或把「新增／匯入」
     這類主要動作塞進工具列而不是標題同行（見 §5.3.1）
-31. 手刻工具列版面而不用 `DataToolbar`——手刻的那份不會跟著共用元件演進
+34. 手刻工具列版面而不用 `DataToolbar`——手刻的那份不會跟著共用元件演進
     （稽核紀錄曾因此整輪改動都沒吃到，見 §5.3.1）
-32. 收合式篩選沒有 chip 列：`篩選 (N)` 只說有幾個、不說是什麼（見 §5.3.1）
+35. 收合式篩選沒有 chip 列：`篩選 (N)` 只說有幾個、不說是什麼（見 §5.3.1）
+
+> ⚠️ **編號一旦給出去就不要重排。** 2026-07-27 發現 28～30 重複了兩組
+> （新加的一組插在舊的上面、各自從 28 起算），修正時把**後面那組**推成 31～33。
+> 新增條目一律**接在最後**，不要插隊——這份清單的編號是它被引用的方式
+> （PR 描述、`ui-conventions.md`、本檔內部交叉引用都指編號）。
 
 ---
 
