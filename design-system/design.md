@@ -756,16 +756,27 @@ tooltip: {
 | 資料夾 | 元件 |
 |---|---|
 | `ui/base/` | `AppInput` `AppSelect` `AppSelectMenu` `DateInput` `EmailInput` `ToolbarButton` `ColorModeToggle` |
-| `ui/table/` | `TableCard` `TableFrame` `TableLoading` `TablePaginationFooter` `TableSortButton` `ColumnVisibilityMenu` `DataToolbar` `FilterPanel` `OrderManager` |
+| `ui/table/` | `TableCard` `TableFrame` `TablePaginationFooter` `TableSortButton` `ColumnVisibilityMenu` `DataToolbar` `FilterPanel` `FilterChip` `OrderManager` |
 | `ui/layout/` | `AppPageLayout` `PageHeader` `SurfaceCard` `AuroraBackdrop` |
-| `ui/nav/` | `ModuleRail` `UserMenu` `ListPanel` `ListItemButton` |
+| `ui/nav/` | `ModuleRail` `UserMenu` `ListPanel` `ListItemButton` `NotificationPanel` `BackToTopButton` |
 | `ui/overlay/` | `FormModal` `ConfirmModal` |
-| `ui/card/` | `SystemAppCard` `UserIdentityCard` |
-| `ui/feedback/` | `EmptyState` `PasswordStrengthMeter` |
+| `ui/card/` | `UserIdentityCard` |
+| `ui/feedback/` | `EmptyState` `LoadingState` `DismissibleBanner` `PasswordStrengthMeter` |
 | `ui/options/` | `OptionsWorkspace` `OptionsManager` `OptionTreeRows` |
 | `ui/audit/` | `AuditLogTable` |
-| `composables/` | `useConfirm` `useEditModal` `useResponsiveColumns` `useAppTheme` `useAccessibleSystems` |
-| `lib/` | `datetime` `account-status` `permission-check` `module-labels` `org-options` `format-employee` `company` `color-mode` `accessible-systems` `profile-backgrounds` |
+| `composables/` | `useConfirm` `useEditModal` `useResponsiveColumns` `useAppTheme` `useTableSort` `useBackToTop` `useScrollRoot` |
+| `lib/` | `datetime` `account-status` `permission-check` `module-labels` `org-options` `format-employee` `company` `color-mode` `profile-backgrounds` |
+
+> **2026-07-28 對帳**：本表與 `apps/portal/src/shared/` 實際內容逐項比對過，上表即現況。
+> 修正的四類——① 已刪除仍列著：`SystemAppCard`／`useAccessibleSystems`／`accessible-systems`
+> （2026-07-26 首頁精簡時一併刪掉的死檔）② 改名搬家沒更新：`TableLoading` → `feedback/LoadingState`
+> （2026-07-27 改的，**本文件 §7.2 自己記了這次改名，這張表卻沒改**）③ 新增沒補上：`FilterChip`／
+> `NotificationPanel`／`BackToTopButton`／`DismissibleBanner`／`useTableSort`／`useBackToTop`／`useScrollRoot`
+> ④ 連帶：下方待辦區的 `TableLoading` 一併正名。
+>
+> ⚠️ **這張表列錯的代價是「重造」**——它的用途就是讓人動手前先查有沒有現成的，
+> 少列 7 個現成元件等於鼓勵重造，多列 3 個死檔則是讓人去 import 不存在的東西。
+> **新增／刪除／改名 `shared/` 底下的東西時，這張表要同一個 PR 更新。**
 
 **元件歸屬判準**：跨模組共用 → `shared/ui/`（依**類型**分子資料夾）；單一模組專屬 → `modules/<模組>/components/`。
 
@@ -817,7 +828,15 @@ tooltip: {
 
 ### 8.2 Dark mode 與浮層
 
-- **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。已抽到 `vite.config` 各 content slot，新元件自動套用。
+- **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**。
+  **色階一律以 §2.4 的 `--app-surface-*` 表為準**：頁底 `neutral-950`（最深）< 卡／modal／殼件 **`800`** < 卡內區塊 `900`；
+  井底層（輸入框／`TableFrame`／`OrderManager`）維持 `950`、斑馬偶列 `900`。
+  已抽到 `vite.config` 各 content slot，新元件自動套用。
+  > ⚠️ **2026-07-28 修正**：本條原本寫「卡／modal／側欄 `850`」——那是 2026-07-24
+  > 「表面層級收成 token」**之前**的值。改版後卡片是 `800`，而 **`850` 只剩表格深色標題帶在用**
+  > （§2.4 明訂那不是表面層，是刻意的深色標題帶）。
+  > 照舊值寫 `neutral-850` 當卡片底**不會報錯**，只會讓卡片對頁面的分離度悄悄少一階
+  > ——**同一份規範裡有兩個互相矛盾的數字，比沒寫還危險**。
 - **浮層一律 `bg-[var(--app-surface-card)]` ＋ `dark:ring-white/25`——`toast` 也是浮層**（2026-07-28 補）。
   官方 toast 的 root 是 `bg-default shadow-lg`：dark 解析成 `neutral-900`，只比頁底亮一階，
   而陰影在深色又看不見，於是整個 toast 幾乎融進背景。
@@ -1264,7 +1283,7 @@ Steven 2026-07-28 拍板維持現狀，判準是投報比：
 - **全站表單巡檢**（哪些 modal 還沒接 schema、哪些後端欄位錯誤還在走 toast）＝獨立一輪，未排程。
 - **業務頁直接寫 `text-{語意色}` 共 24 處／14 檔，尚未逐一判定**（2026-07-24 掃出，與 §2.7 規則 5
   是同一個病灶但**不能一刀切**）：`text-primary` 8、`text-error` 8、`text-warning` 5、`text-success` 3。
-  難處在於**門檻不同**——其中一部分是圖示（`PageHeader`／`ModuleRail`／`TableLoading` 的 spinner，
+  難處在於**門檻不同**——其中一部分是圖示（`PageHeader`／`ModuleRail`／`LoadingState` 的 spinner，
   UI 元件門檻 3.0），另一部分是真的文字訊息（`ConfirmModal` 警語、`AccountSecurityPage` 錯誤提示、
   `WorkCalendarPage` 警示，門檻 4.5）。要逐處看背景與用途才能決定改哪些、哪些列例外。
   ⚠️ 注意 `text-primary` 對白底是 2.98，**連 UI 元件的 3.0 都差 0.02**（同 focus ring 那條例外）。
