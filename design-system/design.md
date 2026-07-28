@@ -818,6 +818,14 @@ tooltip: {
 ### 8.2 Dark mode 與浮層
 
 - **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。已抽到 `vite.config` 各 content slot，新元件自動套用。
+- **浮層一律 `bg-[var(--app-surface-card)]` ＋ `dark:ring-white/25`——`toast` 也是浮層**（2026-07-28 補）。
+  官方 toast 的 root 是 `bg-default shadow-lg`：dark 解析成 `neutral-900`，只比頁底亮一階，
+  而陰影在深色又看不見，於是整個 toast 幾乎融進背景。
+  **改底色時 dark 的 ring 要一起換**——官方 `ring-default` 在 dark ＝ `neutral-800`，
+  與新底色同色，框線會直接消失、浮起感反而更差。
+  > toast 是**最後一個**沒被收進表面系統的元件（其餘 13 個在 `vite.config` 都覆寫過了），
+  > 一直到有人在畫面上看出來才發現。**新增一類元件時要先問「它是不是浮層」**，
+  > 而不是等它在深色下出事。
 - **【鐵律】dark 裝飾效果不准動到 light**：裝飾層用 `hidden dark:block` 只在 dark 掛載；效果 class 一律 `dark:` 前綴。**改完務必切 light 實測 computed** 才算數。
 - **遮罩（scrim）全站同一種深度＝`bg-black/50 dark:bg-black/70`**（2026-07-23 定）。官方預設是
   `bg-elevated/75` 霧白，深色頁面上分離感不足；dark 加深到 70% 對齊 Material dark 慣例（60~70%）。
