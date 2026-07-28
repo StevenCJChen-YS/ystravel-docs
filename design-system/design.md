@@ -751,34 +751,30 @@ tooltip: {
 
 ## 7. 共用元件庫（`apps/portal/src/shared/`）
 
-**改任何頁面 UI 前先看有沒有現成的，別重造。** import 一律走 `@/shared/ui/<類>/<元件>` 絕對別名。
+**改任何頁面 UI 前先看有沒有現成的，別重造。** import 一律走 `@/shared/<類>/<名稱>` 絕對別名。
 
-| 資料夾 | 元件 |
-|---|---|
-| `ui/base/` | `AppInput` `AppSelect` `AppSelectMenu` `DateInput` `EmailInput` `ToolbarButton` `ColorModeToggle` |
-| `ui/table/` | `TableCard` `TableFrame` `TablePaginationFooter` `TableSortButton` `ColumnVisibilityMenu` `DataToolbar` `FilterPanel` `FilterChip` `OrderManager` |
-| `ui/layout/` | `AppPageLayout` `PageHeader` `SurfaceCard` `AuroraBackdrop` |
-| `ui/nav/` | `ModuleRail` `UserMenu` `ListPanel` `ListItemButton` `NotificationPanel` `BackToTopButton` |
-| `ui/overlay/` | `FormModal` `ConfirmModal` |
-| `ui/card/` | `UserIdentityCard` |
-| `ui/feedback/` | `EmptyState` `LoadingState` `DismissibleBanner` `PasswordStrengthMeter` |
-| `ui/options/` | `OptionsWorkspace` `OptionsManager` `OptionTreeRows` |
-| `ui/audit/` | `AuditLogTable` |
-| `composables/` | `useConfirm` `useEditModal` `useResponsiveColumns` `useAppTheme` `useTableSort` `useBackToTop` `useScrollRoot` |
-| `lib/` | `datetime` `account-status` `permission-check` `module-labels` `org-options` `format-employee` `company` `color-mode` `profile-backgrounds` |
-
-> **2026-07-28 對帳**：本表與 `apps/portal/src/shared/` 實際內容逐項比對過，上表即現況。
-> 修正的四類——① 已刪除仍列著：`SystemAppCard`／`useAccessibleSystems`／`accessible-systems`
-> （2026-07-26 首頁精簡時一併刪掉的死檔）② 改名搬家沒更新：`TableLoading` → `feedback/LoadingState`
-> （2026-07-27 改的，**本文件 §7.2 自己記了這次改名，這張表卻沒改**）③ 新增沒補上：`FilterChip`／
-> `NotificationPanel`／`BackToTopButton`／`DismissibleBanner`／`useTableSort`／`useBackToTop`／`useScrollRoot`
-> ④ 連帶：下方待辦區的 `TableLoading` 一併正名。
+> ## 📍 現成的元件有哪些 → 看 `ystravel-platform/apps/portal/src/shared/README.md`
 >
-> ⚠️ **這張表列錯的代價是「重造」**——它的用途就是讓人動手前先查有沒有現成的，
-> 少列 7 個現成元件等於鼓勵重造，多列 3 個死檔則是讓人去 import 不存在的東西。
-> **新增／刪除／改名 `shared/` 底下的東西時，這張表要同一個 PR 更新。**
+> 那份清單**由腳本從目錄產生、CI 會比對**（`npm run inventory`），所以不可能過期。
+> 本節不再重抄一份——**兩份手寫清單一定會有一份是錯的**。
 
-**元件歸屬判準**：跨模組共用 → `shared/ui/`（依**類型**分子資料夾）；單一模組專屬 → `modules/<模組>/components/`。
+**為什麼清單不放這裡**（2026-07-28 改）：清單描述的是 platform repo 的現況，
+照知識三層的判斷口訣「**換一個專案這條還成立嗎**」——「platform 現在有哪些元件」換個專案就不成立，
+所以它本來就該跟著專案走，不該住在跨專案的規範書裡。**位置錯了才是它一直在漂的根因。**
+
+實際漂到什麼程度（2026-07-28 對帳）：舊表 9 個資料夾／49 筆，其中 **3 筆指向已刪除的檔案**
+（`SystemAppCard`／`useAccessibleSystems`／`accessible-systems`，2026-07-26 刪的）、
+**1 筆改名搬家沒更新**（`TableLoading` → `feedback/LoadingState`，**本文件 §7.2 自己記了那次改名**）；
+實際是 15 個資料夾／65 項，`api/`、`audit/`、`nav/`、`options/` 四個資料夾**從頭到尾沒被列進去過**。
+列錯的代價是重造輪子——少列＝有人重寫一個已存在的元件，多列＝有人 import 不存在的東西，
+**兩種都不會有任何測試或型別失敗**。
+
+**本節保留的是規則**（規則換個專案仍然成立，所以留在這裡）：
+
+- **元件歸屬判準**：跨模組共用 → `shared/ui/`（依**類型**分子資料夾）；單一模組專屬 → `modules/<模組>/components/`。
+  判斷句：「**第二個模組也會用到嗎？**」會→shared、不會→模組內。
+- **分工**：`design.md` 講「**該怎麼做**」（色階／字級／RWD／擋件），
+  `shared/README.md` 講「**現在有什麼**」。
 
 **`App*` 包裝只在「補官方元件缺的功能」或「統一 app 慣例」時才做**（如 `AppInput` 的 clearable）。純換名字、對全域 theme 無加值的薄包裝**不做**——theme 已足夠且無重複時，原始 `U*` 可直接用。
 
