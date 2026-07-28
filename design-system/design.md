@@ -573,8 +573,12 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 - **單值欄位配成兩欄**（`sm:grid-cols-2`），`sm` 以下自動回單欄。
   8 個欄位一行一個會拉出很長的卡片、右側整片留白；配對後高度直接砍半
   （實測任職資料卡 512px→269px，桌機省 47%、手機 704→448 省 36%）。
-- **label 與 value 要拉開層級**：label `text-xs text-muted` 固定寬、value `text-sm font-medium text-highlighted`。
-  兩者同字重只差顏色時，掃視會糊成一片、眼睛沒有著陸點。
+- **label 與 value 要拉開層級**：label `text-xs text-muted` 固定寬、value `text-sm text-highlighted`。
+  兩者完全同樣式時，掃視會糊成一片、眼睛沒有著陸點。
+  **層級只靠「字級（xs／sm）」＋「色階（muted／highlighted）」兩軸，不要再加字重。**
+  > 2026-07-28 修正：本條原本寫 value 用 `font-medium`，與 §3.3／§13-11「禁 `font-medium`」直接打架。
+  > 系統中文字只有 400/700，**500 的墨量比＝1.000（no-op）**——原本那個字重從來沒有生效過，
+  > 拉開層級的一直是字級與色階。拿掉它是零像素變化。
 - **手機維持 label／value 同一行**（不要上下堆疊），比堆疊更矮。
 - **⚠️ 長值（email 等無空白字串）要不撐破版面，「列」與「value」都要 `min-w-0`，缺一不可**：
   ①列是 grid item，`min-width:auto` 使其最小尺寸＝內容 min-content，
