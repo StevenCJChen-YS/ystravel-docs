@@ -751,23 +751,30 @@ tooltip: {
 
 ## 7. 共用元件庫（`apps/portal/src/shared/`）
 
-**改任何頁面 UI 前先看有沒有現成的，別重造。** import 一律走 `@/shared/ui/<類>/<元件>` 絕對別名。
+**改任何頁面 UI 前先看有沒有現成的，別重造。** import 一律走 `@/shared/<類>/<名稱>` 絕對別名。
 
-| 資料夾 | 元件 |
-|---|---|
-| `ui/base/` | `AppInput` `AppSelect` `AppSelectMenu` `DateInput` `EmailInput` `ToolbarButton` `ColorModeToggle` |
-| `ui/table/` | `TableCard` `TableFrame` `TableLoading` `TablePaginationFooter` `TableSortButton` `ColumnVisibilityMenu` `DataToolbar` `FilterPanel` `OrderManager` |
-| `ui/layout/` | `AppPageLayout` `PageHeader` `SurfaceCard` `AuroraBackdrop` |
-| `ui/nav/` | `ModuleRail` `UserMenu` `ListPanel` `ListItemButton` |
-| `ui/overlay/` | `FormModal` `ConfirmModal` |
-| `ui/card/` | `SystemAppCard` `UserIdentityCard` |
-| `ui/feedback/` | `EmptyState` `PasswordStrengthMeter` |
-| `ui/options/` | `OptionsWorkspace` `OptionsManager` `OptionTreeRows` |
-| `ui/audit/` | `AuditLogTable` |
-| `composables/` | `useConfirm` `useEditModal` `useResponsiveColumns` `useAppTheme` `useAccessibleSystems` |
-| `lib/` | `datetime` `account-status` `permission-check` `module-labels` `org-options` `format-employee` `company` `color-mode` `accessible-systems` `profile-backgrounds` |
+> ## 📍 現成的元件有哪些 → 看 `ystravel-platform/apps/portal/src/shared/README.md`
+>
+> 那份清單**由腳本從目錄產生、CI 會比對**（`npm run inventory`），所以不可能過期。
+> 本節不再重抄一份——**兩份手寫清單一定會有一份是錯的**。
 
-**元件歸屬判準**：跨模組共用 → `shared/ui/`（依**類型**分子資料夾）；單一模組專屬 → `modules/<模組>/components/`。
+**為什麼清單不放這裡**（2026-07-28 改）：清單描述的是 platform repo 的現況，
+照知識三層的判斷口訣「**換一個專案這條還成立嗎**」——「platform 現在有哪些元件」換個專案就不成立，
+所以它本來就該跟著專案走，不該住在跨專案的規範書裡。**位置錯了才是它一直在漂的根因。**
+
+實際漂到什麼程度（2026-07-28 對帳）：舊表 9 個資料夾／49 筆，其中 **3 筆指向已刪除的檔案**
+（`SystemAppCard`／`useAccessibleSystems`／`accessible-systems`，2026-07-26 刪的）、
+**1 筆改名搬家沒更新**（`TableLoading` → `feedback/LoadingState`，**本文件 §7.2 自己記了那次改名**）；
+實際是 15 個資料夾／65 項，`api/`、`audit/`、`nav/`、`options/` 四個資料夾**從頭到尾沒被列進去過**。
+列錯的代價是重造輪子——少列＝有人重寫一個已存在的元件，多列＝有人 import 不存在的東西，
+**兩種都不會有任何測試或型別失敗**。
+
+**本節保留的是規則**（規則換個專案仍然成立，所以留在這裡）：
+
+- **元件歸屬判準**：跨模組共用 → `shared/ui/`（依**類型**分子資料夾）；單一模組專屬 → `modules/<模組>/components/`。
+  判斷句：「**第二個模組也會用到嗎？**」會→shared、不會→模組內。
+- **分工**：`design.md` 講「**該怎麼做**」（色階／字級／RWD／擋件），
+  `shared/README.md` 講「**現在有什麼**」。
 
 **`App*` 包裝只在「補官方元件缺的功能」或「統一 app 慣例」時才做**（如 `AppInput` 的 clearable）。純換名字、對全域 theme 無加值的薄包裝**不做**——theme 已足夠且無重複時，原始 `U*` 可直接用。
 
@@ -817,7 +824,23 @@ tooltip: {
 
 ### 8.2 Dark mode 與浮層
 
-- **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**：頁底 `neutral-950`（最深）< 卡／modal／側欄 `850` < 表格內回 `950`、斑馬偶列 `900`；輸入框 dark 底壓到 `950`。已抽到 `vite.config` 各 content slot，新元件自動套用。
+- **dark 下不靠 `shadow` 製造浮起感**（陰影幾乎看不見），改用 **`ring-1 dark:ring-white/25` hairline ＋ 深色明度分層**。
+  **色階一律以 §2.4 的 `--app-surface-*` 表為準**：頁底 `neutral-950`（最深）< 卡／modal／殼件 **`800`** < 卡內區塊 `900`；
+  井底層（輸入框／`TableFrame`／`OrderManager`）維持 `950`、斑馬偶列 `900`。
+  已抽到 `vite.config` 各 content slot，新元件自動套用。
+  > ⚠️ **2026-07-28 修正**：本條原本寫「卡／modal／側欄 `850`」——那是 2026-07-24
+  > 「表面層級收成 token」**之前**的值。改版後卡片是 `800`，而 **`850` 只剩表格深色標題帶在用**
+  > （§2.4 明訂那不是表面層，是刻意的深色標題帶）。
+  > 照舊值寫 `neutral-850` 當卡片底**不會報錯**，只會讓卡片對頁面的分離度悄悄少一階
+  > ——**同一份規範裡有兩個互相矛盾的數字，比沒寫還危險**。
+- **浮層一律 `bg-[var(--app-surface-card)]` ＋ `dark:ring-white/25`——`toast` 也是浮層**（2026-07-28 補）。
+  官方 toast 的 root 是 `bg-default shadow-lg`：dark 解析成 `neutral-900`，只比頁底亮一階，
+  而陰影在深色又看不見，於是整個 toast 幾乎融進背景。
+  **改底色時 dark 的 ring 要一起換**——官方 `ring-default` 在 dark ＝ `neutral-800`，
+  與新底色同色，框線會直接消失、浮起感反而更差。
+  > toast 是**最後一個**沒被收進表面系統的元件（其餘 13 個在 `vite.config` 都覆寫過了），
+  > 一直到有人在畫面上看出來才發現。**新增一類元件時要先問「它是不是浮層」**，
+  > 而不是等它在深色下出事。
 - **【鐵律】dark 裝飾效果不准動到 light**：裝飾層用 `hidden dark:block` 只在 dark 掛載；效果 class 一律 `dark:` 前綴。**改完務必切 light 實測 computed** 才算數。
 - **遮罩（scrim）全站同一種深度＝`bg-black/50 dark:bg-black/70`**（2026-07-23 定）。官方預設是
   `bg-elevated/75` 霧白，深色頁面上分離感不足；dark 加深到 70% 對齊 Material dark 慣例（60~70%）。
@@ -1256,7 +1279,7 @@ Steven 2026-07-28 拍板維持現狀，判準是投報比：
 - **全站表單巡檢**（哪些 modal 還沒接 schema、哪些後端欄位錯誤還在走 toast）＝獨立一輪，未排程。
 - **業務頁直接寫 `text-{語意色}` 共 24 處／14 檔，尚未逐一判定**（2026-07-24 掃出，與 §2.7 規則 5
   是同一個病灶但**不能一刀切**）：`text-primary` 8、`text-error` 8、`text-warning` 5、`text-success` 3。
-  難處在於**門檻不同**——其中一部分是圖示（`PageHeader`／`ModuleRail`／`TableLoading` 的 spinner，
+  難處在於**門檻不同**——其中一部分是圖示（`PageHeader`／`ModuleRail`／`LoadingState` 的 spinner，
   UI 元件門檻 3.0），另一部分是真的文字訊息（`ConfirmModal` 警語、`AccountSecurityPage` 錯誤提示、
   `WorkCalendarPage` 警示，門檻 4.5）。要逐處看背景與用途才能決定改哪些、哪些列例外。
   ⚠️ 注意 `text-primary` 對白底是 2.98，**連 UI 元件的 3.0 都差 0.02**（同 focus ring 那條例外）。
