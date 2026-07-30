@@ -501,13 +501,34 @@ Modal 內文是要你據以做決定的。
 
 | 階 | 值 | 用在 |
 |---|---|---|
-| `rounded-xs` | **2px** | 徽章（全部尺寸）、控件 xs、tabs 的 trigger 記號 |
-| `rounded-sm` | **4px** | 控件 sm、卡片內的小區塊 |
-| `rounded-md` | **6px** | 控件 md（＝全站預設控件高 36px 那階）|
-| `rounded-lg` | **8px** | 控件 lg、卡片、清單外框 |
-| `rounded-xl` | **12px** | 控件 xl（僅登入頁）|
+| `rounded-xs` | **2px** | 徽章 xs、tooltip、tabs 的 trigger 記號 |
+| **`rounded-xsm`（半階）** | **3px** | **徽章 sm 以上、控件 xs**（按鈕／input／select／textarea）|
+| `rounded-sm` | **4px** | 卡片內的小區塊、控件 sm、選單「選項」高亮 |
+| `rounded-md` | **6px** | 控件 md（＝全站預設控件高 36px 那階）、**浮層**（UserMenu／各式選單／popover）、**表格框** |
+| `rounded-lg` | **8px** | 控件 lg、卡片、清單外框、彈窗／slideover |
+| `rounded-xl` | **12px** | 控件 xl（僅登入頁）、帳號中心大卡 |
 
-**要調整圓角就只動 `--ui-radius` 那一行。**
+**要整體調整圓角就只動 `--ui-radius` 那一行**——半階也是 `calc(var(--ui-radius) * 0.75)`，會一起等比例走。
+
+#### 半階 `rounded-xsm`（2026-07-30 Steven 拍板）
+
+3px 不在 Nuxt UI 的倍率上（xs 是 0.5x＝2px、sm 是 1x＝4px）。徽章與 xs 控件落在
+**2px 太銳利、4px 又太圓**的位置——2px 讀起來像反鋸齒的毛邊而不是刻意的形狀。
+先例＝色階早就有半階（`teal-450/550/650/750`、`neutral-850`），同一個理由：官方刻度太粗。
+
+命名 `xsm`＝xs 與 sm 之間。**刻意不叫 `2xs`**（那會讓人以為比 xs 更小，方向剛好相反）。
+
+> **⚠️ 為什麼要寫成 `@utility` 而不是改 token：** Nuxt UI 的 `ui.css` 用 `@theme default inline`，
+> **`inline` 代表 Tailwind 把「值」編進 class**，不是編成 `var()` 參照——實際產出是
+> `.rounded-xs { border-radius: calc(var(--ui-radius) * 0.5) }`，那個 `0.5` 寫死在 class 裡，
+> **`--radius-xs` 從頭到尾沒有被任何東西參照**（實測：把 `--radius-xs` 設成 3px，徽章仍是 2px）。
+> 所以「新增一階」只能從 utility 這一層做。定義在 `main.css`。
+>
+> **⚠️⚠️ 已知副作用（實測）：tailwind-merge 不認得 `rounded-xsm`**，不會把它跟官方
+> `rounded-md` 視為同一組衝突類別，所以套用半階的元件身上**兩個 class 都會留著**
+> （徽章實際是 `rounded-md rounded-xsm`）。它能贏靠的是 **CSS 順序**（自訂 utility 排在內建之後），
+> 不是類別合併。後果：在使用點寫 `<UBadge class="rounded-lg">` 想蓋掉圓角會**靜默失效**。
+> 這與下面「不准在使用點蓋」同向所以可接受，但它是**無聲**的失敗——要改圓角請改該元件的 theme。
 
 > **⛔ 不准再寫 `rounded-[任意值]`。** 若發現「刻度上沒有我要的值」，那是**元件該站哪一階**
 > 的問題——去改該元件的 theme 挑另一階，不要繞過刻度。
@@ -884,7 +905,7 @@ PageHeader → TableCard → DataToolbar → 深色表頭 UTable → TablePagina
 ```ts
 tooltip: {
   slots: {
-    content: 'rounded-[2px] h-auto max-w-xs whitespace-normal',
+    content: 'rounded-xs h-auto max-w-xs whitespace-normal',
     text: 'whitespace-normal',
   },
 }
@@ -1546,7 +1567,9 @@ iOS 點按鈕甚至不保證給 focus，所以連「focus 也會開」都救不�
     toast 縮 icon 時前導 icon 與關閉鈕同時偏高 2px，而那不會有任何東西報錯（見 §6.5.1）
 39. 寫 `rounded-[任意值]` 繞過圓角刻度（唯一例外＝巢狀圓角，且要在原地寫明理由）；
     或**在使用點貼 class 蓋掉元件預設**而不是回頭改該元件的 theme——同一個補丁抄超過
-    兩三次就是預設值錯了，2026-07-28 為此清掉 61 處（見 §4.2）
+    兩三次就是預設值錯了，2026-07-28 為此清掉 61 處（見 §4.2）。
+    ⚠️ **`rounded-xsm`（半階 3px）是刻度的一部分、不是任意值**，巡檢時不要「順手統一」掉；
+    也要注意在使用點蓋徽章／xs 控件的圓角會**靜默失效**（tailwind-merge 不認得半階，見 §4.2）
 40. 覆寫元件 theme 的 `variants.*` 時**沒確認該變體的值是字串還是物件**：badge 的
     `variants.size` 是 `{ base }`，寫成字串會把官方那一整組（字級／內距／圓角）**整個換掉**，
     class 裡出現字面的 `[object Object]`，而 typecheck、build 全都不會報錯（見 §12）
