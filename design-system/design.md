@@ -226,6 +226,43 @@
 ⚠️ **這條在觸控裝置上不生效**——手機沒有 hover。要讓手機也看得出可點，得動**靜止態**
 （改 `outline`，或 `link` 變體的 `text-muted` → hover `text-default`），那是另一個決定。
 
+#### 2.4.2 hover 底色該用哪一階（2026-07-30 定案）
+
+起因：Steven 從畫面回報「rail 的模組鈕 hover 好像比右邊的頁面按鈕深」。實測他是對的
+——light 下三者**都坐在白底上**，卻是三個深度，而且背後沒有規則：
+
+| 元件 | hover | 選取／active | 對白底分離度 |
+|---|---|---|---|
+| rail 模組鈕（改前）| `bg-accented` | `bg-primary/10` | **1.238** ← 最深 |
+| navbar 動作鈕（搜尋／收件匣／收合）| `bg-elevated` | 無 | 1.101 |
+| 側欄頁面連結（官方 `navigation-menu`）| `bg-elevated/50` | `bg-elevated` | 1.052 ← 最淺 |
+| `ListItemButton` | `bg-elevated/50` | `bg-elevated` | 1.052 |
+
+**規則（一條軸）：hover 的深度取決於「這一階要不要留給選取態」。**
+
+1. **選取態也用灰階**的清單／導覽 → hover **半階** `bg-elevated/50`（1.052）、
+   選取**整階** `bg-elevated`（1.101）。差的那半階就是「暫時指著」vs「目前在這」。
+2. **選取態用品牌色**（rail ＝ `bg-primary/10`）**或根本沒有選取態**（navbar 動作鈕）
+   → hover 直接用**整階** `bg-elevated`（1.101），**不必讓階**。
+3. **控件坐在頁面底上** → 往深一階 `bg-accented`（1.125），見 §2.4.1。
+
+**照這條規則只有 rail 要改**（`accented` → `elevated`，1.238 → 1.101）。
+`bg-accented` 在 §2.4 的表裡標的是**選取態**，rail 拿選取態的階去做 hover 是誤用。
+
+> ⚠️ **這條規則第一版是錯的，寫下來避免重演**：原本的結論是「三個全部收斂到 1.101」，
+> 包含把側欄的 `elevated/50` 提到 `elevated`。**那會讓側欄的 hover 與 active 變成同色**
+> ——使用者就分不出「目前在哪一頁」和「滑鼠正指著哪一頁」。
+> 病因是**只量了想改的那個屬性（hover），沒問「這個變體原本還帶了什麼」（active）**
+> ——與 2026-07-28 徽章 `variants.size` 那次同一個錯法。
+> **可複用：要改一個狀態的色階之前，先把同一個元件的其他狀態一起列出來。**
+
+> **佐證：aurora 早就分對了**——rail 用 `--aurora-hover`（白 8%）、側欄用
+> `--aurora-hover-soft`（白 6%），差半階，正是規則 1／2 的區分。**只有 light 沒跟上。**
+
+⚠️ **rail 這條與 §2.4.1 不同，明暗都改**：§2.4.1 是 light 專屬的病（dark 的頁底與 elevated
+本來就分得開），而「拿選取態的階當 hover」是**與模式無關的誤用**，plain dark 同樣中招
+（改前 2.295 → 改後 1.699，改後與 navbar 同階）。**aurora 不受影響**（`aurora:` 選擇器更具體）。
+
 ### 2.5 文字灰階
 
 一律用 semantic token，下表 light 值供對照（dark 由 token 自動翻低階變亮）：
@@ -1530,6 +1567,10 @@ iOS 點按鈕甚至不保證給 focus，所以連「focus 也會開」都救不�
     **卻用官方預設的 `hover:bg-elevated`**（見 §2.4.1）。light 下 `bg-elevated` ＝
     `--app-surface-page`，hover 前後**逐位元同色**。要 `hover:bg-accented`，且只改 light。
     ⚠️ **typecheck、build、單元測試全都會過**，dark 也完全正常——這個洞只在淺色露出來
+46. **拿 `bg-accented`（選取態那一階）當 hover 用**（見 §2.4.2）。hover 的階要看選取態
+    佔了哪一階：選取態走灰階 → hover 用半階 `elevated/50`；選取態走品牌色或沒有選取態
+    → hover 用整階 `elevated`。⚠️ **改任何一個狀態的色階之前，先把同元件的其他狀態一起列出來**
+    ——只看 hover 就把側欄提到整階，會讓 hover 與 active 撞色
 
 ### 13-1 明文例外：登入／忘記密碼／重設密碼三頁的 `!important`
 
