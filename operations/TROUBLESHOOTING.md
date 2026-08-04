@@ -62,6 +62,23 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 ### `npm run lint --fix`（全專案 glob）會重排未修改檔案的 import 格式
 prettier 規則的自然結果，不算 bug；寫 PR 時把這類格式化 diff 跟本體改動分開，別混進 commit。
 
+### 關掉一個浮層、同一個 tick 開下一個 → 整頁不能點也不能捲，只能重新整理
+2026-08-04 `core-saved-filters` 踩到（手機版「在篩選抽屜按存 → 關抽屜 → 開輸入名稱的 modal」）。
+症狀是 `body` 被留下 `overflow: hidden; pointer-events: none`，**而且沒有人會再來解**。
+
+**成因**：`UDrawer`(vaul) 開著時在 `body` 上鎖，關閉時 **`animationEnd` 先發、body 樣式的還原晚幾十毫秒**。
+在那個空窗裡第二層浮層（`FormModal` → reka-ui）掛載，把「還鎖著的 body」記成自己的 original，
+於是它關掉時「還原」＝**把鎖貼回去**，而抽屜早就走了。
+
+**只有 `<sm` 會這樣**：≥sm 兩層都是 reka 的 modal，它自己會算巢狀層數——所以**桌機完全看不到這個洞**，
+而且 typecheck／測試／build 全綠。
+
+**正解＝盯真正的條件，不要信事件、也不要用固定延遲**：等 `body` 的 inline style 真的乾淨了再開下一層
+（`MutationObserver` 觀察 `body` 的 `style`，附一個逾時保險）。實作見 `FilterPanel` 的 `closed` 事件。
+⚠️ **固定延遲一定會回來咬人**：空窗大小跟著頁面當下在做什麼浮動——第一版只轉發 `animationEnd`，
+員工管理過了、稽核紀錄照樣壞，因為後者的「套用」順便打了一次 API。
+⚠️ 這類 bug **量版面量不到**：375px 的水平捲動、觸控目標、右緣全部正常，只有把互動**整條走完**才會遇到。
+
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
 ### Prisma 7：datasource `url` 不能寫在 schema
