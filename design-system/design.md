@@ -1299,6 +1299,12 @@ dashboard panel 的 body——`window.scrollTo` / `window.scrollY` / `useWindowV
 
 **架構**：深淺色「模式」之下各自可選「主題」。深色＝**極光（預設）／預設（純黑）**；淺色＝預設 only。存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記；色彩模式另存 `ystravel.platform.color-mode`）。
 
+**外觀模式有三個值：淺色／深色／跟隨裝置，預設＝跟隨裝置**（2026-08-05）。判準沿用 §3.4 決定字級歸屬那條——**這個偏好描述的是「環境」還是「身體」**：主題是環境（辦公室日光燈 vs 家裡關燈），既然是環境就跟著裝置走；字級是身體，所以不跟。
+
+⚠️ **`auto` 只存在於「使用者選了什麼」那一層，永遠不會變成 html 的 class**——套上去的一律是解析後的 `light`/`dark`。控制項要顯示的值必須讀「他選的」那一個；讀「現在是不是深色」的話，選了跟隨裝置之後控制項會自己跳到 light 或 dark，看起來像他選了固定模式。
+
+⚠️ **改這類「有預設值又存 localStorage」的偏好時，先問舊值是不是歧義的。** 2026-08-05 這次：舊預設寫死 `light`，而 VueUse 的 `useStorage` 預設 `writeDefaults: true`——**使用者沒選過，`light` 就已經被寫進去了**，於是存著的值分不出「他選的」和「系統寫的」。只改預設對已經用過的人完全無效，必須連舊值一起清。**上線前清幾乎零成本，上線後就只能在「不動使用者設定」和「功能有意義」之間二選一。**
+
 實作＝`useAppTheme.ts`（watch 掛 html `.theme-aurora` class）＋ `main.css` 的
 `@custom-variant aurora (&:where(.dark.theme-aurora, .dark.theme-aurora *))`。
 
