@@ -95,6 +95,22 @@ Prisma 7 把 seed 設定從 `package.json` 的 `prisma.seed` 移到 `prisma.conf
 **很容易誤判成登入功能壞掉**，先查 `SELECT count(*) FROM core.auth_users;` 再懷疑程式。
 解法＝reset 之後**一定要另外跑** `npm run prisma:seed`。（2026-07-20）
 
+### Tailwind v4：**註解裡寫出完整的 class 名稱，會真的產生 CSS**
+Tailwind v4 掃的是**原始檔的字串**，不解析 Vue 模板或 JS 語法——所以寫在**註解**、字串常數、
+甚至說明文字裡的 class 名稱，**照樣被當成候選並產出規則**。2026-08-05 在
+`NotificationBell.vue` 的註解裡舉了一個 `-translate-x-[…px]` 當「正確寫法」的示範，
+rebuild 比對就發現產物多出一條**沒有任何元素在用**的規則（CSS 產物 hash 也跟著變）。
+要在註解裡示範 class 寫法，改用文字描述或把字串拆開。
+⚠️ **反過來也成立，而且更常用**：要確認某個 class 到底有沒有生效，**去 build 產物裡找它**
+（`apps/portal/dist/assets/*.css`）。但 CSS 會把 class 名稱裡的 `.` `[` `]` 跳脫成
+`\.` `\[` `\]`，所以直接 `grep "translate-x-0.4"` 會得到**假的 0 筆**——要用
+`grep -F 'translate-x-0\.4'`，並且**一定要放一個已知存在的 class 當對照組**
+（同一次量測我就先被假的 0 筆騙過一輪）。
+📌 附帶一個常踩的事實：Tailwind v4 的間距刻度**只認 0.25 的倍數**，
+`0.4` 這種值**整個 class 不會產生**，而畫面看起來完全正常、沒有任何型別／測試／build 會報錯。
+⚠️ 但「沒產生 CSS」**不等於**「刪掉它沒影響」——Nuxt UI 的 `:ui` 覆寫走 tailwind-merge，
+無效的 class 照樣會把元件預設的同組 class 擠掉，刪掉會讓預設值遞補回來（實際弄壞過一次徽章位置）。（2026-08-05）
+
 ### Docker Desktop 反覆「unexpected error」起不來：`dockerInference` socket 殘留
 `%LOCALAPPDATA%\Docker\run\dockerInference` socket 檔殘留、無法移除 → Docker Desktop 開機反覆跳「unexpected error」。解法＝關掉所有 Docker 程序 → 刪掉殘留 socket 檔 → 重啟 Docker Desktop。Docker Desktop 起不來又找不到明顯原因時先查這個殘留檔。（2026-07-16）
 
