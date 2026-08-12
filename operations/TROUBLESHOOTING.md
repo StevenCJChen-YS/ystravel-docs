@@ -129,5 +129,19 @@ rebuild 比對就發現產物多出一條**沒有任何元素在用**的規則�
 ### NestJS `deleteOutDir`＋`tsBuildInfoFile` 在 dist 外＝殘缺 dist（MODULE_NOT_FOUND）
 `nest-cli.json` 開 `deleteOutDir: true` 會在 build 前清空 `dist/`，但 tsconfig `incremental: true` 的 `tsconfig.tsbuildinfo` 若放在 dist **外**（預設 package 根），tsc 仍以為所有檔案都編譯過、只回填有變動的檔——結果 dist 只剩零星檔案，啟動就 `Cannot find module './xxx'`。症狀特徵：typecheck/tests 全綠、只有 `node dist/main` 掛。解法＝tsconfig 補 `"tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"`，讓 buildinfo 跟 dist 同生共死。（2026-07-17，hr-employee-master 輪踩到）
 
+### 要驗 NestJS 的 DI／路由表，一定要對編譯後的 `dist` 開 app——`tsx` 跑原始碼會給假的紅燈
+想確認「這兩個 controller 共用 base path 會不會撞路由」「新 module 有沒有造成循環依賴」時，**不要用 `tsx` 開 `AppModule`**——esbuild 不產 `design:paramtypes` metadata，Nest 會把每一個建構子參數都看成 undefined，噴滿螢幕的 `UndefinedDependencyException`。**那是載入器的限制，不是程式壞了。**
+正確做法（2026-08-07 實測有效）：先 `npm run build --workspace @ystravel/api`，再寫一支 `.cjs` require 編譯後的產物：
+```js
+require('reflect-metadata'); require('dotenv/config');
+const { NestFactory } = require('@nestjs/core');
+const { AppModule } = require('../dist/app.module');
+NestFactory.create(AppModule, { logger: ['log'] })
+  .then(async (app) => { await app.init(); await app.close(); });
+```
+Nest 的 `RoutesResolver` 會逐條印 `Mapped {path, method}`，**順序就是真正的比對順序**。不要自己去翻 express 的 `_router.stack`——Express 5 已經改掉那個內部結構，會拿到空陣列。
+**觸發時機**：動到 module imports、controller base path、或任何 provider 的建構子時，build 完對 dist 開一次；用完把暫時腳本刪掉。
+📌 同族＝上一條（`deleteOutDir`）與「`apps/api` 不能 import `packages/shared`」——**三件的判準都一樣：build 過、typecheck 過、CI 全綠，只有 `node dist/main.js` 才會炸**（那次是 `ERR_MODULE_NOT_FOUND`）。唯一忠實的判準是真的產物。
+
 ### Git Bash（Windows）curl -d 帶中文＝寫進 DB 的就是亂碼
 Windows 的 Git Bash console codepage 非 UTF-8，`curl -d '{"name":"王小明"}'` 送出的 bytes 已經是壞的——**資料進 DB 就毒了**，不是顯示問題（用 psql 看 length 對不上即可確認）。測試 API 帶中文一律寫成 UTF-8 檔案再 `-d @file.json`。（2026-07-17）
