@@ -1511,6 +1511,27 @@ dashboard panel 的 body——`window.scrollTo` / `window.scrollY` / `useWindowV
 
 ⚠️ **改這類「有預設值又存 localStorage」的偏好時，先問舊值是不是歧義的。** 2026-08-05 這次：舊預設寫死 `light`，而 VueUse 的 `useStorage` 預設 `writeDefaults: true`——**使用者沒選過，`light` 就已經被寫進去了**，於是存著的值分不出「他選的」和「系統寫的」。只改預設對已經用過的人完全無效，必須連舊值一起清。**上線前清幾乎零成本，上線後就只能在「不動使用者設定」和「功能有意義」之間二選一。**
 
+⚠️ **公開頁（不需登入的那幾頁）一律淺色，不跟隨裝置**（2026-08-13 Steven 發現後拍板）。
+目前是登入／忘記密碼／設定密碼／Google 回呼四頁——它們的視覺是**寫死的淺色設計**
+（實測 `dark:` 出現次數是 **0**），所以整頁強制 `light`。
+
+**為什麼不是「只把 toast 改成淺色」**：toast 由 `UApp` 在**根層級**渲染、不在頁面裡面，
+吃的是 `<html>` 上的 `.dark`——深色裝置下會出現「白底頁面 ＋ 黑底 toast」。
+而 `dark:` 變體是 `:where(.dark, .dark *)`，只要 `.dark` 掛在 `<html>`，**整棵樹都符合**，
+沒有辦法用 class 讓某個子樹「退出深色」。逐個元件壓的話，**下次公開頁長出
+modal／tooltip／popover 會再中一次，而那時沒有人會記得有這條規則**。
+
+**判準＝有沒有 `requiresAuth`，不另外維護路徑清單**——新增公開頁不必做任何事就自動生效；
+多一份清單就多一個「新增時沒有人記得回來加」的洞。
+
+📌 兩個實作上的關鍵（`color-mode.ts`）：
+① 走 VueUse `useColorMode` 的 **`onChanged` 攔截點**改，**不要自己另外加 watcher**
+——它內部是 `watch(state, …, { flush: 'post' })`，自己再加一個同 flush 的，誰先誰後
+就只剩「建立順序」在決定，沒有東西守得住。
+② `onChanged` **只在色彩模式變動時觸發**，所以還要一個 watch 盯著「是不是公開頁」
+——否則「從深色的內頁走到登入頁」不會有任何事情發生。
+📌 這只影響**套到 DOM 上的值**，不改寫使用者存的偏好（設定頁的控制項不會跳掉）。
+
 實作＝`useAppTheme.ts`（watch 掛 html `.theme-aurora` class）＋ `main.css` 的
 `@custom-variant aurora (&:where(.dark.theme-aurora, .dark.theme-aurora *))`。
 
