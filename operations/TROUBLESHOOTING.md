@@ -79,6 +79,32 @@ prettier 規則的自然結果，不算 bug；寫 PR 時把這類格式化 diff 
 員工管理過了、稽核紀錄照樣壞，因為後者的「套用」順便打了一次 API。
 ⚠️ 這類 bug **量版面量不到**：375px 的水平捲動、觸控目標、右緣全部正常，只有把互動**整條走完**才會遇到。
 
+### 打某個網址得到一片空白（殼在、內容區空）——vue-router 最上層的 `path: ''` 會吃掉 `{ path: '/' }`
+2026-08-20 platform 踩到（PR #233），病灶是 8/14 引進殼版型路由的 #220，**壞了 6 天沒有人回報**。
+症狀：打根網址落在「側欄與 header 都在、內容區完全空白」的頁面，**console 乾淨、typecheck／測試／build 全綠**。
+
+**成因**：最上層的 `path: ''`（給整站共用版型用的那條）在 vue-router 會 normalize 成 `/`，
+於是它跟同層既有的 `{ path: '/', redirect: '/home' }` **撞號，而且版型那條會贏**
+（匹配分數，不是宣告順序——`{path:'/'}` 寫在前面照樣輸）。
+結果是 `/` 只匹配到版型、沒有任何子路由，`<RouterView>` 裡什麼都沒有；
+那條 redirect 則變成**永遠跑不到的死碼**。
+
+**怎麼確診（30 秒）**：在跑著的頁面直接問 router，不要讀程式碼猜——
+```js
+const r = document.querySelector('#app').__vue_app__.config.globalProperties.$router
+const a = r.resolve('/')
+;({ path: a.path, matched: a.matched.map(m => m.path), redirectedFrom: a.redirectedFrom })
+```
+`matched` 只有一個元素＝子路由沒匹配到；**`redirectedFrom` 是 `null` ＝那條 redirect 根本沒被走到**。
+要驗整條鏈就用 `await r.push('/')` 再看 `r.currentRoute.value.fullPath`（`resolve` 不會跟著 redirect 走）。
+
+**正解**：要讓 `/` 去哪裡，改**版型路由的預設子路由**（`children: [{ path: '', ... }]`），
+**不要在最上層再放一條 `{ path: '/' }`**。同一支 router 的 `/account` 從第一天就是這個寫法，
+照抄它就對了。舊網址留成最上層的 redirect（`{ path: '/home', redirect: '/' }`）給書籤與外部入口。
+
+⚠️ **為什麼沒人回報**：只有**手動輸入網址**的人會遇到——從側欄點、從登入流程進來、
+從通知信連進來的人全都走具名路徑，永遠碰不到。這種「入口偏門＋零報錯」的組合會活很久。
+
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
 ### Prisma 7：datasource `url` 不能寫在 schema
