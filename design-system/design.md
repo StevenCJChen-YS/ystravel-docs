@@ -1301,11 +1301,17 @@ SurfaceCard
 | 規則 | 值 | 原因 |
 |---|---|---|
 | 輸入框字級 | **手機（<640px）16px、桌面 14px** | iOS 點擊 <16px 的輸入框會整頁放大 |
-| placeholder | 手機縮為 `text-sm` 顯示 | iOS 縮放只看輸入文字字級，placeholder 可獨立縮小 |
+| placeholder | 手機縮為 `text-sm` 顯示（**含富文本編輯區的提示字**） | iOS 縮放只看輸入文字字級，placeholder 可獨立縮小 |
 | 欄位標籤/說明/錯誤 | **固定 14px，不隨 input size 放大** | 16px 底線只限輸入控件；formField theme 已鎖回 |
-| 16px 底線範圍 | **只限輸入控件**（input/select/textarea） | 表格、標籤、說明等顯示文字不受限 |
+| 16px 底線範圍 | **只限輸入控件**（input/select/textarea/富文本編輯區） | 表格、標籤、說明等顯示文字不受限 |
 | 無標籤欄位 | 必須有欄位外說明文字撐住語意 | 標籤與 placeholder 不可同時缺席 |
 
+- **富文本編輯區也吃 16px 底線**（2026-08-25 補）：它是 `contenteditable` 不是 `<input>`，但 iOS 一樣放大。
+  ⚠️ 官方 `UEditor` theme 的 `base` **沒有任何字級**，編輯區於是直接繼承 `UFormField` 的 `text-sm`（14px）
+  ——手機那半要在包裝層自己補 `text-base sm:text-sm`（見 `AppRichTextEditor`）。
+  **不要**跟著加 `/6`、`/5` 行高後綴：段落行高由官方的 `[&_p]:leading-7` 管，加了會打架。
+  提示字則相反，**要**縮回 14px 跟其他欄位的 placeholder 對齊（iOS 只看可編輯元素本身的字級，
+  `::before` 不影響它）——照抄官方那條 placeholder 選擇器加 `max-sm:…:before:text-sm`。
 - **說明/備註欄**：獨占一列 → `<UTextarea :rows="3" class="w-full" />`；跟單行欄位同排 grid → 維持 `AppInput`（textarea 高度突兀）。
 - **必填星號只有「同表單有可選欄位可對比」時才標**。整張表單每欄都必填就不要標（整排星號傳達不了資訊）。**標了就要在 schema 裡真的驗。**
 - **placeholder 要舉例，不要複述欄位名**：「科威員編」配「例如：Y001」，不是「請輸入科威員編」。（密碼類無法舉例，屬例外。）
@@ -2194,6 +2200,10 @@ iOS 點按鈕甚至不保證給 focus，所以連「focus 也會開」都救不�
     ⚠️ 這條已在 `ModuleRail`（權限少的帳號）與 `DefinitionList`（最後一列沒排滿）
     各犯一次——**常常空的那一側才是會出事的那一側**，而開發者自己的帳號多半兩邊都有，
     所以怎麼看都正常
+59. **會打字的元件在手機沒有 16px 底線**（見 §6.2）——底線跟的是「**使用者在裡面打字**」，
+    不是標籤名叫不叫 `<input>`：`contenteditable` 的富文本編輯區一樣會讓 iOS 整頁放大。
+    ⚠️ 這類元件多半**自己沒有字級**、繼承 `UFormField` 的 14px，
+    **桌面看起來完全正常，只有在手機上點下去才會發現**
 
 ### 13-1 明文例外：登入／忘記密碼／重設密碼三頁的 `!important`
 
