@@ -568,6 +568,41 @@ oklch 值取自 `node_modules/tailwindcss/theme.css`（規格值，不是 app �
 
 ⚠️ 標準檔**不掛 `data-font-scale` 屬性**（走 `--fs` 預設 1），確保沒調過的人看到的畫面與本功能上線前逐像素一致。
 
+### 3.5 單行截斷：`truncate` 一定要配 block 系元素（2026-08-27，實測事故）
+
+**規則：`truncate` 只能用在 `block`／`flex`／`grid` 這類元素上。用在 `<span>`／`<a>` 這種
+預設 inline 的元素上，它有一半是啞的。**
+
+標準寫法（連結／文字都一樣）：
+
+```html
+<a class="block w-fit max-w-full truncate text-sm …">{{ name }}</a>
+```
+
+| class | 少了會怎樣 |
+|---|---|
+| `block` | ①截斷失效 ②多出上方空白，見下 |
+| `w-fit` | 連結／熱區撐滿整列（實測 42px → 412px），滑鼠移到那一行右邊的空白也會有 hover |
+| `max-w-full` | 長字串把容器撐開，等於沒截斷 |
+
+**為什麼 inline 不行——兩個症狀，一個都不會報錯：**
+
+1. **`overflow: hidden` 不作用在 inline 非置換元素上**（CSS 規範就這樣定的），
+   而 `text-overflow: ellipsis` 依賴它。所以 `truncate` 三件事只有 `white-space: nowrap` 生效
+   ⇒ **不換行、也不截斷，直接溢出**。實測一個 36 字的姓名溢出容器 **91.7px**。
+2. **行框高度被外層的「支柱（strut）」撐開**。inline 元素所在的那個行框，高度取
+   「外層 block 的字級／行高」與「這個 inline 自己的行高」的較大者。
+   實測案例：外層 16px/24px、姓名 `text-sm`（14px/20px）⇒ 行框 24px、
+   多出來的 4px 有 **3px 落在字的上面**，於是那一格量起來 40px 但文字只佔 36px，
+   **上 16px／下 13px，看起來就是「沒有垂直置中，差一點點」**。
+
+> 🔴 **事故：** 這兩件在 platform 的親友清單裡從 2026-08-19 上線一直存在，
+> 一直到 2026-08-27 Steven 說「名字上方好像有一點空白，我不知道該怎麼說」才被量出來
+> （platform PR #256）。**typecheck 過、build 過、測試全綠、畫面也沒壞**
+> ——只是那個「太長會收成…」從來沒生效過，而且每張卡片都偏 3px。
+>
+> 📌 **判準很短：看到 `truncate`，先看它掛在什麼元素上。** 是 `<span>`／`<a>` 就是錯的。
+
 ---
 
 ## 4. 間距、圓角、斷點、密度
@@ -2088,6 +2123,7 @@ iOS 點按鈕甚至不保證給 focus，所以連「focus 也會開」都救不�
 18. 有輸入欄位的 modal 手刻 `UModal` 而非用 `FormModal`（見 §6.7）
 19. 新增 `notificationRegistry` 事件，其 `category`／`title`／`body` 文案未附 Steven 拍板（見 §10.3）
 20. 頁面副標超過一句、塞機制說明、或放 `共 N 筆` 計數（見 §10.4）
+21. `truncate` 掛在 `<span>`／`<a>` 等 inline 元素上，沒補 `block w-fit max-w-full`（見 §3.5）
 21. 表格排序各頁自刻 sortKey/accessors、前端分頁把排序套在切片「之後」、或有拖曳序位的表又給 column sort（見 §5.4.1）
 22. 自造平台名稱（在對外文案給平台第二個類別詞：workspace／gateway／platform），或登入頁放沒接資料的假狀態指示（見 §10.5）
 23. 新增顏色組合沒過 §2.7 對比度基線（solid 鈕白字未達 4.5、amber 配白字、text-primary 當正文連結色）
