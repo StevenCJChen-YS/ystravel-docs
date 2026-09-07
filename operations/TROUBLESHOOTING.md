@@ -79,6 +79,34 @@ prettier 規則的自然結果，不算 bug；寫 PR 時把這類格式化 diff 
 員工管理過了、稽核紀錄照樣壞，因為後者的「套用」順便打了一次 API。
 ⚠️ 這類 bug **量版面量不到**：375px 的水平捲動、觸控目標、右緣全部正常，只有把互動**整條走完**才會遇到。
 
+### Claude Code 內嵌瀏覽器：浮層關掉後卡在畫面上、整頁不能點——不是 app 的 bug，把動畫跑完就解開
+2026-09-04 驗收 `crm-inquiry-case` 時撞到（三個 modal 送出後都不關、`body` 留著 `pointer-events: none`），
+當時寫了半頁分析說是真 bug；2026-09-07 找到不用重新整理的解法。
+
+**成因**：這個內嵌瀏覽器**不推進 CSS 動畫**（`document.getAnimations()` 全部停在 `running`，
+自己用 Web Animations API 造一個 200ms 動畫 `await a.finished` 也永遠不回來）。
+reka-ui 的 Presence 要等 `animationend` 才卸載，動畫不結束 ⇒ 永遠不卸載 ⇒ body 的鎖沒人解。
+**在真的瀏覽器裡完全正常**——所以 typecheck／測試／Steven 用 Chrome 都看不到。
+
+**解法（在 `javascript_tool` 跑，只動測試環境，不碰程式）**：對每個 `data-state="closed"` 的元素
+補發它在等的那個 `animationend`，再把能結束的動畫都 `finish()`，最後把 body 的鎖清掉：
+
+```js
+for (const el of document.querySelectorAll('[data-state="closed"]')) {
+  const an = getComputedStyle(el).animationName
+  if (an && an !== 'none') el.dispatchEvent(new AnimationEvent('animationend', { animationName: an, bubbles: true }))
+}
+for (const a of document.getAnimations()) { try { a.finish() } catch {} }   // 無限循環的動畫會丟例外，吞掉
+if (getComputedStyle(document.body).pointerEvents === 'none') document.body.style.pointerEvents = ''
+```
+
+⚠️ **下拉選單（Select）關掉後殘留的 listbox 會吃掉下一次點擊**：點「套用」變成「關 listbox」，
+看起來像套用沒生效。選完選項先跑一次上面那段，再點下一顆鈕。
+⚠️ 同一個環境另外兩個坑：`type` 打進 reka 的日期欄（year／month／day spinbutton）不會生效；
+`ctrl+a` 在 textarea 裡不會全選，文字會接在後面。
+📌 判斷法：「條件具備」（visibilityState、hasFocus、沒開減少動態效果）≠「事情有發生」——
+要證明動畫有沒有跑，只能量動畫本身。
+
 ### 打某個網址得到一片空白（殼在、內容區空）——vue-router 最上層的 `path: ''` 會吃掉 `{ path: '/' }`
 2026-08-20 platform 踩到（PR #233），病灶是 8/14 引進殼版型路由的 #220，**壞了 6 天沒有人回報**。
 症狀：打根網址落在「側欄與 header 都在、內容區完全空白」的頁面，**console 乾淨、typecheck／測試／build 全綠**。
