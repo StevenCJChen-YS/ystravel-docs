@@ -135,7 +135,45 @@ const a = r.resolve('/')
 
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
-### Prisma 7：datasource `url` 不能寫在 schema
+### 🔴 `prisma migrate dev` 要求「reset 資料庫」，但你只是加一個 enum 值（2026-09-09）
+
+**症狀**：跑 `migrate dev`（含 `--create-only`）時它不產 migration，改說
+
+> The migration `2026XXXX_某某` was modified after it was applied.
+> We need to reset the following schemas… You may use `prisma migrate reset`. **All data will be lost.**
+
+**⚠️ 不要照做。** 那會清光 dev 的測試資料（真實客戶匯入、手動建的驗收資料全沒）。
+
+**根因不是資料庫壞了，是 checksum 對不上。** Prisma 在 `_prisma_migrations` 存每支
+migration.sql 的 SHA-256；**這個 repo 的既定工作流會讓它們必然漂開**：
+
+1. `migrate dev` 產生**並同時套用** migration；
+2. 照 platform `CLAUDE.md` 的鐵則，產完要**打開檔案編輯**——刪掉 Prisma 硬塞的跨模組外鍵
+   `DROP CONSTRAINT`（它不知道那些手寫外鍵的存在）、補上為什麼這樣改的註解；
+3. 檔案變了、DB 裡的 checksum 沒變 ⇒ 下次 `migrate dev` 判定 drift。
+
+2026-09-09 實測：**31 支裡有 16 支對不上**，最早可追到 2026-07-28。這是累積了一個多月的狀態，
+不是誰弄壞的。
+
+**正解（不碰既有紀錄、不掉資料）：**
+
+```bash
+# ① 先確認「檔案與資料庫的真實差異」只有你這次要改的東西
+cd apps/api
+npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script
+# ② 把輸出裡「不是你這次要改的」那些 DROP CONSTRAINT 全部忽略（那是已知雜訊）
+# ③ 手寫 migration 資料夾與 migration.sql，只放真正的那幾行
+# ④ 用 deploy 套用——它不做 drift 偵測，也就不會要你 reset
+npx prisma migrate deploy
+npx prisma generate
+```
+
+📌 **`migrate diff` 是這題的關鍵工具**：它直接比對「現在的資料庫」與「schema 檔」，
+所以能證明「16 支 checksum 對不上」只是記帳問題——**結構其實一致**。
+沒有這一步就只能猜，而猜錯的代價是掩蓋一個真的結構落差。
+
+⚠️ **另一種修法（改 `_prisma_migrations` 的 checksum 欄位）能一勞永逸，但那是動資料庫的簿記，
+要先確認每一支的差異都只是註解**。2026-09-09 沒做，因為當天只要加一個 enum 值。
 Prisma 7 breaking change——`datasource` 的 `url` 不再寫在 `schema.prisma`。改法：CLI（`generate`/`migrate`）走 `prisma.config.ts`（`defineConfig({ datasource: { url } })`）；runtime 一律用 driver adapter（PostgreSQL＝`@prisma/adapter-pg`，`new PrismaPg(connectionString)` 傳給 `new PrismaClient({ adapter })`）。升級 Prisma 或新建專案先確認這兩處都改到位，否則 CLI 或 runtime 其一會連不到 DB。（2026-07-16）
 
 ### `vue-tsc` 撞 TypeScript 7（`typescript/lib/tsc` not exported）
