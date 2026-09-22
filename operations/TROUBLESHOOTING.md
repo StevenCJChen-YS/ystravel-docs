@@ -187,6 +187,27 @@ Prisma 7 把 seed 設定從 `package.json` 的 `prisma.seed` 移到 `prisma.conf
 **很容易誤判成登入功能壞掉**，先查 `SELECT count(*) FROM core.auth_users;` 再懷疑程式。
 解法＝reset 之後**一定要另外跑** `npm run prisma:seed`。（2026-07-20）
 
+### 🔴 Prisma 7 + driver adapter：唯一鍵衝突（P2002）**沒有 `meta.target`**——衝突處理分支永遠進不去、直接 500，而且測試是綠的
+**症狀**：程式明明寫了「撞到唯一鍵就回 409 加一句人話」，真機卻回 `Internal server error`，後端 log 是
+`PrismaClientKnownRequestError … Unique constraint failed on the fields: ("lineUserId")`。
+2026-09-22 LINE 綁定「同一個 LINE 綁第二個人」實測炸出來；那段程式 7/27 上線，**兩個月從沒對真 DB 跑通過**。
+**成因**：Prisma 7 走 driver adapter（本專案 `@prisma/adapter-pg`）之後，`P2002` 的 `meta` 只剩
+`modelName` 與 `driverAdapterError`，**舊版放欄位名的 `meta.target` 不存在**。欄位名搬到
+`meta.driverAdapterError.cause.constraint.fields`，而且每個都帶雙引號（`'"userId"'`）。
+程式讀 `meta.target` 得到 `undefined` → 每個 `if` 都不成立 → 原錯誤照丟出去 → 500。
+三種索引在真 PostgreSQL 上的形狀（實測）：一般 `@unique` 與帶條件唯一索引的 `fields` 可靠（剝引號即可）；
+**運算式索引**（如 `lower(btrim(name))`）的 `fields` 是被拆爛的索引定義（`'lower(btrim(name::text'`），
+只有 `originalMessage` 裡的 `constraint "orgs_name_key"` 可信。
+**為什麼測試沒抓到**：BDD 用的 in-memory 替身自己捏 `meta: { target: [...] }`——替身跟真 DB 的形狀分家，
+service 的 `catch (P2002)` 在測試裡進得去、真機進不去，**沒有任何型別／測試／build 會報錯**。
+**解法**：①讀 P2002 一律走 platform `apps/api/src/common/prisma-unique-violation.ts` 的 `parseUniqueViolation()`
+（同時給剝過引號的 `fields` 與約束名 `constraint`，一般索引比 `fields`、運算式索引比 `constraint`）；
+②替身要丟 P2002 時**只准用**同目錄的 `prisma-unique-violation.fake.ts`，那支 spec 拿工廠跟實測抓下來的原始物件互相對照，
+形狀再漂就會紅。
+📌 **通用判準：替身丟的錯誤物件，要用真 DB 實測抓下來的形狀當依據，不要照文件或印象捏。**
+要驗形狀最快的方法＝在一個**一定會回滾**的交易裡故意撞一次，`JSON.stringify(error.meta)` 印出來看
+（`orgs-uniqueness.int-spec.ts` 的 SAVEPOINT 寫法可以直接抄）。（2026-09-22）
+
 ### Tailwind v4：**註解裡寫出完整的 class 名稱，會真的產生 CSS**
 Tailwind v4 掃的是**原始檔的字串**，不解析 Vue 模板或 JS 語法——所以寫在**註解**、字串常數、
 甚至說明文字裡的 class 名稱，**照樣被當成候選並產出規則**。2026-08-05 在
