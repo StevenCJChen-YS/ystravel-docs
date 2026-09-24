@@ -133,6 +133,29 @@ const a = r.resolve('/')
 ⚠️ **為什麼沒人回報**：只有**手動輸入網址**的人會遇到——從側欄點、從登入流程進來、
 從通知信連進來的人全都走具名路徑，永遠碰不到。這種「入口偏門＋零報錯」的組合會活很久。
 
+### 點勾選框的文字，勾到的是另一顆——一個 `UFormField` 包多顆 `UCheckbox`，全部共用同一個 id
+2026-09-18 platform 踩到（PR #295），Steven 實際點畫面才發現。
+症狀：CRM「匯出諮詢單」視窗的兩顆勾選包在同一個 `UFormField` 裡，點「帶處理進度」的**文字**，
+勾起來的卻是「帶詢問內容」；直接點方框本身正常。**不會有任何錯誤或警告，typecheck／build／測試全綠。**
+偏偏這兩顆管的是「客人原話、處理過程要不要跟著檔案離開系統」，勾錯格不是小事。
+
+**成因**：`UFormField` 的設計是「一個標籤配一個輸入元件」——它用 `useId()` 產生**一個** id，
+透過 provide 交給裡面的輸入元件，自己的標籤也 `for` 這個 id。`UCheckbox` 拿到注入的 id 就直接用，
+**只有沒被注入時才自己產生**（Nuxt UI 4.9 `Checkbox.vue`：`const id = _id.value ?? useId()`）。
+於是兩顆的方框（reka 的 `<button role="checkbox">`）是同一個 id、兩行文字的 `<label>` 都 `for` 它，
+而瀏覽器把 `for` 對到**文件裡第一個**有這個 id 的元素——點哪一行字都是勾第一顆（群組標題也是）。
+直接點方框不經過 label，所以正常；**只有「點文字」會露餡**，畫面看起來完全正常、量版面也量不到。
+
+**正解**：一組勾選框**不要包在 `UFormField` 裡**，改用原生 `<fieldset>`＋`<legend>` 當群組標題——
+外面沒有 `UFormField`，每顆 `UCheckbox` 就各自產生自己的 id。legend 套 `mb-1 text-sm font-medium text-default`，
+字級字重跟 form-field theme 的標籤一致。實作見 platform `apps/portal/src/modules/crm/components/ExportInquiriesModal.vue`。
+
+⚠️ **別用「每顆手動給 `id`」繞過**：`useFormField` 看到 `id` prop 會把它**寫回** `UFormField` 的 id，
+群組標題改成對到最後一顆——只是換個地方勾錯。
+📌 **判準：一個 `UFormField` 裡只放一個輸入元件。** 單顆勾選、`UCheckboxGroup`／`URadioGroup` 包在裡面都沒問題
+（後兩者會主動讓出 `UFormField` 的 id，每個選項各自產生 id）；「各綁一個布林的好幾顆」才要換 fieldset。
+📌 驗收勾選框要**點文字**，不要只點方框——方框永遠是對的，會錯只錯在文字。
+
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
 ### 🔴 `prisma migrate dev` 要求「reset 資料庫」，但你只是加一個 enum 值（2026-09-09）
