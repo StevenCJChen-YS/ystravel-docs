@@ -151,7 +151,8 @@ const a = r.resolve('/')
 字級字重跟 form-field theme 的標籤一致。實作見 platform `apps/portal/src/modules/crm/components/ExportInquiriesModal.vue`。
 
 ⚠️ **別用「每顆手動給 `id`」繞過**：`useFormField` 看到 `id` prop 會把它**寫回** `UFormField` 的 id，
-群組標題改成對到最後一顆——只是換個地方勾錯。
+群組標題改成對到最後一顆——只是換個地方勾錯。（這段是讀 Nuxt UI 4.9 原始碼推得，**沒有在瀏覽器實測過**；
+真要走這條路之前先實際點一次。）
 📌 **判準：一個 `UFormField` 裡只放一個輸入元件。** 單顆勾選、`UCheckboxGroup`／`URadioGroup` 包在裡面都沒問題
 （後兩者會主動讓出 `UFormField` 的 id，每個選項各自產生 id）；「各綁一個布林的好幾顆」才要換 fieldset。
 📌 驗收勾選框要**點文字**，不要只點方框——方框永遠是對的，會錯只錯在文字。
