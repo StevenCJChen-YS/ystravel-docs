@@ -251,6 +251,17 @@ rebuild 比對就發現產物多出一條**沒有任何元素在用**的規則�
 ### Docker Desktop 反覆「unexpected error」起不來：`dockerInference` socket 殘留
 `%LOCALAPPDATA%\Docker\run\dockerInference` socket 檔殘留、無法移除 → Docker Desktop 開機反覆跳「unexpected error」。解法＝關掉所有 Docker 程序 → 刪掉殘留 socket 檔 → 重啟 Docker Desktop。Docker Desktop 起不來又找不到明顯原因時先查這個殘留檔。（2026-07-16）
 
+### jest-cucumber：某一步「5 秒逾時」而不是斷言失敗——步驟函式宣告的參數比正規式的組數多
+**症狀**：某條場景卡在某一步，結果是 `Exceeded timeout of 5000 ms for a test`，**沒有任何斷言失敗**，
+看起來像程式卡住或替身沒回應。
+**原因**：jest-cucumber 把步驟函式**多出來的那個參數**當成「做完請呼叫我」的 callback 塞進去，
+然後一直等它被呼叫。最容易踩到的寫法是**同一支步驟函式給兩種正規式共用**——一種有 3 組（`"(.*)" 對到客戶 "(.*)" (甲|乙)`）、
+一種只有 2 組，函式寫成 `(friend, customer, tag?) => …`：2 組的那條，`tag` 收到的是 callback，不是 `undefined`。
+（ystravel-platform `integration-line-oa.steps.ts`，2026-10-02 撞到兩條場景同時逾時。）
+**解法**：用其餘參數接，`(...args: unknown[]) => { const [a, b, c] = args … }`——其餘參數不算進函式的參數個數，
+jest-cucumber 就不會把它當成 callback 版本；取第三個值時再確認它是字串（`typeof c === 'string'`）。
+📌 判斷法：逾時的那一步，數一下**函式參數個數**跟**正規式的組數**一不一樣。
+
 ## 本機驗證環境（家用機，2026-07-10 驗證有效；Phase 1 後改看 platform 文件）
 
 - 前端 preview port **5299**（base `/Auth/`），Steven 自己的 dev 在 5174 勿佔；後端 `npm run start:dev --prefix <根>\Ystravel-AuthService`（3001），開工先確認 3001 跑的是 start:dev 不是舊 dist build。
