@@ -157,6 +157,28 @@ const a = r.resolve('/')
 （後兩者會主動讓出 `UFormField` 的 id，每個選項各自產生 id）；「各綁一個布林的好幾顆」才要換 fieldset。
 📌 驗收勾選框要**點文字**，不要只點方框——方框永遠是對的，會錯只錯在文字。
 
+### 極光下某一塊「平白深一塊」、或擋不住底下捲過去的字——毛玻璃裡面又疊了一層毛玻璃（2026-10-07）
+
+**症狀**（platform LINE 待確認卡的固定左欄，Steven 從畫面問「底色怪怪的」）：
+①沒捲動時，那一欄比整張表深一點，像一塊色塊；②往右捲時，底下的「張志明」「0988…」淡淡透出來，
+沒有被模糊掉。淺色、純黑兩個主題都正常。
+
+**原因**：那一欄是 `aurora:bg-transparent aurora:backdrop-blur-xl`，想讓捲過去的字變一片糊。
+但外面的對話卡片（`SurfaceCard`）在極光下**自己就是毛玻璃**（`backdrop-filter: blur(24px)`）。
+瀏覽器規定：元素的毛玻璃只看得到「往外數到最近一個本身也有毛玻璃（或 filter／opacity）的祖先」為止——
+所以內層那一欄拿到的只是卡片那層半透明色，**拿不到後面的頁面**：沒捲時把半透明色又疊一次（變深），
+捲了也糊不到該糊的東西。
+
+**驗法**：DevTools 把那一格的 `backdrop-filter` 關掉——顏色馬上跟旁邊一致，就是這個病。
+往上找祖先的 `getComputedStyle(el).backdropFilter`，不是 `none` 的那一層就是兇手。
+
+**修法**：卡片裡面**不要再用 `backdrop-blur`**。要擋住底下內容就用實心底色；
+只在真的需要擋的時候才上（固定欄＝往右捲了才上，`scrollLeft > 0`），平常保持透明、跟周圍同色。
+實作見 platform `apps/portal/src/modules/crm/components/LineMatchReviewCard.vue` 的 `STICKY`。
+📌 附帶：表格固定欄的分界線用 `shadow-[inset_-1px_0_0_…]`，不要用 `border-r`——
+Tailwind 預設 `border-collapse: collapse`，固定欄的框線不會跟著固定欄走（已知的瀏覽器行為；這次直接用陰影，**沒有實測 `border-r` 版本**）。
+📌 這一類只在**某一個主題**壞，驗收要三種主題都看（design.md §4.3〈主題也要全看〉）。
+
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
 ### 🔴 `prisma migrate dev` 要求「reset 資料庫」，但你只是加一個 enum 值（2026-09-09）
