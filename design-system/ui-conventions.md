@@ -114,7 +114,7 @@ NuxtUI `UTable` **沒有內建 density/compact prop**（table theme 只有 stick
 
 ## 13. 主題系統：深淺色下各自可選主題＋aurora 毛玻璃（2026-07-17 系統化，取代舊 LobbyShell 硬寫）
 
-**架構（可擴充、非硬寫）**：深淺色「模式」之下各自可選「主題」。深色＝**極光（預設）／預設（純黑）**、淺色＝預設 only；存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記，帳號級同步＝未來 `auth-user-preferences`）。實作＝`useAppTheme.ts`（watch 掛 html `.theme-aurora` class）＋Tailwind 4 `@custom-variant aurora (&:where(.dark.theme-aurora, .dark.theme-aurora *))`（`main.css`）。個人化頁「介面外觀」區出兩個主題 select。
+**架構（可擴充、非硬寫）**：深淺色「模式」之下各自可選「主題」。深色＝**極光（預設）／預設（純黑）**（⚠️ 2026-10-07 起預設值改成純黑，見 design.md §9）、淺色＝預設 only；存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記，帳號級同步＝未來 `auth-user-preferences`）。實作＝`useAppTheme.ts`（watch 掛 html `.theme-aurora` class）＋Tailwind 4 `@custom-variant aurora (&:where(.dark.theme-aurora, .dark.theme-aurora *))`（`main.css`）。個人化頁「介面外觀」區出兩個主題 select。
 
 - **【鐵律】保證深色「預設」像素級等同原設計、淺色不變**：元件**只「加」`aurora:` 前綴樣式、絕不改 base class**（`aurora:` 變體本身有 `.dark` gate）。未來要加新主題＝新 class＋新 `@custom-variant`，同法炮製——**別回頭硬寫某個 shell**（LobbyShell 舊做法的反面）。
 - **⚠️ 別再用 `dark:` 做「只有某主題才要」的裝飾**：`dark:` = 所有深色（含「預設」純黑）都套 → 破壞上面的保證。極光專屬效果一律 `aurora:`。曾犯：AccountLayout／AppPageLayout 的毛玻璃原用 `dark:`，連純黑也玻璃，2026-07-17 全改 `aurora:`。（呼應 §6 的「dark 裝飾不准動 light」，多一層「aurora 裝飾不准動預設深色」。）
