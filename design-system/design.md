@@ -1846,7 +1846,12 @@ LINE 對話（社群訊息頁、客戶詳情的 LINE 分頁）的訊息串**固�
 
 ## 9. 主題系統（深淺色 ×主題）
 
-**架構**：深淺色「模式」之下各自可選「主題」。深色＝**極光（預設）／預設（純黑）**；淺色＝預設 only。存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記；色彩模式另存 `ystravel.platform.color-mode`）。
+**架構**：深淺色「模式」之下各自可選「主題」。深色＝**預設（純黑，預設值）／極光**；淺色＝預設 only。存 localStorage（`ystravel.platform.theme.dark/light`，每台裝置各記；色彩模式另存 `ystravel.platform.color-mode`）。
+
+**深色的預設值＝純黑**（2026-10-07 Steven 改；原本預設是極光＝品牌識別）。想要極光的人到〈個人化〉自己選。
+改的時候踩到下面那條「預設值存 localStorage 的歧義」：舊寫法 `writeDefaults: true` 早就把 `aurora` 寫進每個開過平台的人的瀏覽器，
+所以上線前清了一次（marker `ystravel.platform.theme.dark.reset-2026-10-07`），並改成 `writeDefaults: false`——
+**之後新增「存在本機的偏好」一律這樣寫**，存著的值才分得出是本人選的，日後改預設不必再清。
 
 **外觀模式有三個值：淺色／深色／跟隨裝置，預設＝跟隨裝置**（2026-08-05）。判準沿用 §3.4 決定字級歸屬那條——**這個偏好描述的是「環境」還是「身體」**：主題是環境（辦公室日光燈 vs 家裡關燈），既然是環境就跟著裝置走；字級是身體，所以不跟。
 
