@@ -1448,6 +1448,15 @@ SurfaceCard
 2. **置中了嗎？** 固定尺寸（如 `max-md:size-10`）必須同時 `:ui="{ base: 'justify-center p-0' }"`——UButton 預設非置中。
 3. **`aria-label` 還在嗎？** 藏字用 `max-sm:hidden` ＋ 保留 `aria-label`/`title` 全文；**不要**用 `max-md:size-10` 硬縮還留著文字。
 
+**有文字的 `link` 鈕不帶內距（2026-10-12，全域 theme 管）**：
+官方的 link 變體仍吃 size 的 `px-* py-*`，於是「一句話＋下一行一顆連結鈕」永遠比上面那句縮進去一截——
+`LoadMoreRow`／`BulkActionBar`×2／`LineMessageBubble` 各自貼了 `p-0`，詢問表單的「完整說明」是第 5 處，
+同一個補丁抄超過兩三次＝預設值錯了（§4.2）。現在 `vite.config` 的 button theme 以 compound variant
+`{ variant: 'link', square: false, class: 'p-0' }` 一次處理：**有文字的**歸零、**icon-only 的不動**
+（UButton 沒有 label 也沒有 slot 就自動算 `square`，輸入框裡的清除／眼睛／日曆那十幾顆靠那個內距當點擊範圍）。
+- 業務頁**不要再寫** `class="p-0"` 給 link 鈕；icon-only 的 link 鈕要縮（如 `FilterChip` 的 ×）才在原地寫，並附理由。
+- 手機要加大觸控範圍：用 `max-sm:min-h-10` 撐高，不要把 padding 加回來（會又縮進去）。
+
 ### 6.2 表單輸入
 
 | 規則 | 值 | 原因 |
