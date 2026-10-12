@@ -179,6 +179,20 @@ const a = r.resolve('/')
 Tailwind 預設 `border-collapse: collapse`，固定欄的框線不會跟著固定欄走（已知的瀏覽器行為；這次直接用陰影，**沒有實測 `border-r` 版本**）。
 📌 這一類只在**某一個主題**壞，驗收要三種主題都看（design.md §4.3〈主題也要全看〉）。
 
+### vite dev server 給的是**舊程式**：改了檔、F5 了、DOM 還是改前的模板（Windows，2026-10-12）
+
+**症狀**：改完 `.vue`，頁面重新整理後行為沒變；用瀏覽器 `fetch('/src/.../X.vue')` 拿到的內容沒有你剛寫的字。
+不是瀏覽器快取——換個 `?t=` 查詢字串向 vite 要，有時就拿到新的了，代表是 vite 的檔案監看沒收到那次變更、轉譯快取沒失效。
+當天公司機上 vite（Steven 自己在終端機起的那支）連續三次這樣，用 Edit 工具改的檔都中。
+
+**怎麼確認**：`curl -s "http://[::1]:5174/src/<路徑>?t=$(date +%s)" | grep -c "<你剛寫的字>"`——注意 vite 可能只聽 `[::1]`（IPv6），
+`localhost` 在 curl 會解到 `127.0.0.1` 連不上或連到別支。
+
+**解法**：`touch <那個檔>` 讓監看器再收一次事件，等兩秒再 curl 一次；頁面再 F5。
+改了很多檔就一起 touch。不用重開 dev server。
+
+**順帶**：Claude Code 內嵌瀏覽器面板的 F5 對模組也可能用到快取，`location.reload()` 之後再驗一次 DOM 才算數。
+
 ## 建置與工具鏈類（`ystravel-platform` monorepo，2026-07-16 Phase 0 建置踩到）
 
 ### 🔴 `prisma migrate dev` 要求「reset 資料庫」，但你只是加一個 enum 值（2026-09-09）
