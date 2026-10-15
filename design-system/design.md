@@ -86,6 +86,7 @@
 | 語意變數 `--ui-*`（`text-primary`／subtle・soft 標籤／focus ring／outline 主鈕） | primary(teal)、warning(amber) ＝**自訂 550 半階**；success／secondary／info ＝ 600；error(rose) 用預設 | **400** |
 | **solid 主鈕**（固定色階，**明暗拆階**，2026-07-24 拍板） | `bg-primary-550` 白字（2.98，**刻意接受例外**見 §2.7），hover/active → **650/750** | `bg-primary-450` **深字** `text-neutral-900`（8.37 ✅），hover/active → **550/650** |
 | **solid error 鈕**（固定色階，明暗一致，2026-07-24） | `bg-error-600` 白字（4.53 ✅），hover/active → 700/800 | 同 light |
+| **未讀徽章**（收件匣鈴鐺的 chip、社群訊息篩選分頁的數字；固定色階，明暗一致，2026-10-15） | `bg-error-600` 白字（4.53 ✅；對頁面底 4.53） | 同 light（對頁面底 3.91 ✅）。⚠️ 不要寫 `bg-error`：那是 `--ui-error`，dark 會變 400、白字只剩 2.86——Steven 看深色時抓到 |
 | **switch checked**（固定色階，明暗一致） | `bg-primary-500` | 同 light |
 
 > **solid 主鈕拆階的來龍去脈**（2026-07-24，取代 07-14「明暗一律固定 550」）：550 白字僅 2.98
