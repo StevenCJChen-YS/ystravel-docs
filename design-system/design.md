@@ -1795,6 +1795,11 @@ v-if="below.length"
   > toast 是**最後一個**沒被收進表面系統的元件（其餘 13 個在 `vite.config` 都覆寫過了），
   > 一直到有人在畫面上看出來才發現。**新增一類元件時要先問「它是不是浮層」**，
   > 而不是等它在深色下出事。
+  > ⚠️ **2026-10-19 補：`popover` 也漏過**——全站 6 個 `UPopover` 只有日期選擇、通知收件匣、個人選單
+  > 各自在 `:ui` 補了 `dark:ring-white/25`，貼圖選擇器、工作日曆年份選擇、頁首說明漏掉，深色下框線消失
+  > （Steven 在社群訊息的貼圖選擇器看出來）。已收進 `vite.config` 的 `popover.slots.content`，**各處不要再自己寫**（platform #323）。
+  > 那次照「一次只動一個變因」**只收了框線**：popover 底色仍是官方 `bg-default`（dark ＝ `neutral-900`），
+  > 跟本條「浮層底色＝`--app-surface-card`」還不一致，要不要收另議。
 - **【鐵律】dark 裝飾效果不准動到 light**：裝飾層用 `hidden dark:block` 只在 dark 掛載；效果 class 一律 `dark:` 前綴。**改完務必切 light 實測 computed** 才算數。
 - **遮罩（scrim）全站同一種深度＝`bg-black/50 dark:bg-black/70`**（2026-07-23 定）。官方預設是
   `bg-elevated/75` 霧白，深色頁面上分離感不足；dark 加深到 70% 對齊 Material dark 慣例（60~70%）。
