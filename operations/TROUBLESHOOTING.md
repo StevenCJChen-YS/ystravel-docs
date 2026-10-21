@@ -42,6 +42,19 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 **修法**：ExcelJS streaming reader 逐列讀＋每 1000 列 `createMany` 分批寫，不一次持有全部資料，也避免單一 SQL 超過 packet 上限。
 **驗證**：用 exceljs 寫一次性腳本（repo 內、`npx ts-node -T` 直呼 Service 繞過 HTTP/認證）產生真實規模合成資料實測，跑完清掉；別拿正式資料庫當測試場。
 **套用**：涉及匯入/批次/大量寫入的功能，設計時就問「真實資料量多少」並寫進 SD 的效能需求節。**此經驗直接適用 platform 的 `integration/cowell` 科威匯入管線。**
+⚠️ **2026-10-20 補：上面「ExcelJS streaming reader」這個修法本身會把中文讀壞**——見下一條。照抄之前先讀它。
+
+### 🔴 ExcelJS 串流讀 xlsx，中文會被讀成「�」——不報錯，只是字壞掉（2026-10-20）
+
+**症狀**：用 `ExcelJS.stream.xlsx.WorkbookReader` 讀科威匯出的 Excel，大約千分之一～二的格子出現「�」（U+FFFD），
+姓名、地址、來源帳號、團名都有；**同一份檔裡一模一樣的字串壞成一樣**，換一份檔就壞在別處——看起來很像「來源系統匯出時隨機弄壞字」。
+**它不是檔案壞了**：同一格（`客戶分析報表_2.xlsx` F3013）三種讀法——SheetJS 整檔讀「呂聯恭」、ExcelJS 整檔讀（`workbook.xlsx.readFile`）「呂聯恭」、
+**ExcelJS 串流讀「呂聯���」**（exceljs 4.4.0）。改用 SheetJS 重量，五份科威檔 **0 格**「�」。
+原因**推測**是串流一段一段讀時，一個中文字的位元組剛好被切在兩段之間（未查 exceljs 原始碼證實）。
+**影響**：platform `apps/api/scripts/import-customers.ts`（`crm-party-base` 的陽春匯入 CLI）用的就是串流讀法——照它匯真資料，姓名會被存成亂碼且沒有任何錯誤。
+**怎麼驗**：拿**真實檔**（不是合成資料），用匯入程式的讀法讀出全部格子，跟 SheetJS 讀的逐格比對＝0 差異、全檔 0 個 U+FFFD。
+**修法**：由 W2 #6 `cowell-import-pipeline` 的 SD 決定（大檔仍不能一次讀進記憶體，不能單純改回整檔讀）。
+**怎麼踩到的**：AI 量測時看到「�」就斷言「科威匯出會弄壞字」、寫進規格還出了選擇題；Steven 打開 Excel 看那一列是好的，一句話戳破。**讀出來的資料看起來壞了，先換一種讀法確認，再說是資料壞**。
 
 ### Google 登入測試規則（native login 與 Google login 是兩條路徑）
 `GOOGLE_ALLOWED_TEST_EMAILS` 只影響 Google OAuth 流程，**不影響帳密登入**（「同 email 不在白名單仍可帳密登入」不是 bug）。非 production 若設了測試白名單，Google 帳號選擇器**不要送公司網域 `hd` 提示**，否則私人 Gmail 白名單帳號會在選號畫面被藏起來造成誤判；正式環境維持 `hd` 提示。（2026-07-09）
