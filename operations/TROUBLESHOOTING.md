@@ -311,6 +311,12 @@ rebuild 比對就發現產物多出一條**沒有任何元素在用**的規則�
 jest-cucumber 就不會把它當成 callback 版本；取第三個值時再確認它是字串（`typeof c === 'string'`）。
 📌 判斷法：逾時的那一步，數一下**函式參數個數**跟**正規式的組數**一不一樣。
 
+### jest-cucumber：`tagFilter` 用中文標籤（`not @延後`）＝整支測試跑不起來（2026-10-27）
+**症狀**：`loadFeature(…, { tagFilter: 'not @延後' })`，整支 steps 檔一條都沒跑，直接報 `Could not parse tag filter`。
+**原因**：jest-cucumber 解析標籤篩選用的是 `/@[A-Za-z-_0-9]+/`，只認英數字、`-`、`_`。`.feature` 裡**寫**中文標籤沒問題，**拿來篩**才會炸。
+（ystravel-platform `crm/cowell-import/cowell-import-pipeline.steps.ts`，#6 段 3 撞到。）
+**解法**：中文標籤旁邊多掛一個英文的，篩英文那個。例如 `@延後 @deferred`，搭配 `tagFilter: 'not @deferred'`。中文那個留著給人看。
+
 ## 本機驗證環境（家用機，2026-07-10 驗證有效；Phase 1 後改看 platform 文件）
 
 - 前端 preview port **5299**（base `/Auth/`），Steven 自己的 dev 在 5174 勿佔；後端 `npm run start:dev --prefix <根>\Ystravel-AuthService`（3001），開工先確認 3001 跑的是 start:dev 不是舊 dist build。
