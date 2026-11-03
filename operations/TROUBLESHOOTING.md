@@ -43,6 +43,15 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 **驗證**：用 exceljs 寫一次性腳本（repo 內、`npx ts-node -T` 直呼 Service 繞過 HTTP/認證）產生真實規模合成資料實測，跑完清掉；別拿正式資料庫當測試場。
 **套用**：涉及匯入/批次/大量寫入的功能，設計時就問「真實資料量多少」並寫進 SD 的效能需求節。**此經驗直接適用 platform 的 `integration/cowell` 科威匯入管線。**
 ⚠️ **2026-10-20 補：上面「ExcelJS streaming reader」這個修法本身會把中文讀壞**——見下一條。照抄之前先讀它。
+⚠️ **2026-11-03 補：串流讀了、分批寫了，還有一個洞——背景工作會把整支 API 卡住。** Node 一次只做一件事：匯入在 API 程序裡跑時，
+一段同步的長迴圈跑多久，其他員工點什麼都等多久（platform 科威匯入判直客同業那段，2.4 萬張單卡了 37 秒）。
+長迴圈每做一小段（約 20 毫秒）就 `await new Promise(r => setImmediate(r))` 讓出一次；量的時候另開一支迴圈每 100 毫秒打一支什麼都不做的請求，看它最久等多久
+（platform `crm/cowell-import/pipeline/yield-to-event-loop.ts`，修後最久 41 毫秒）。
+⚠️ **2026-11-03 再補：Prisma 7 會把最近的寫入資料留在記憶體——沒開 debug 也一樣。** 它的 debug 紀錄器一律留最近 100 次呼叫的參數（出錯時附進錯誤報告），
+其中一呼叫帶整份查詢計畫，而 `createMany` 的計畫裡含**全部要寫的資料**。一次寫 1,000 筆、欄位多的表，每寫一次就多留 5～7MB，要等之後 100 次別的查詢才擠掉
+（platform 科威匯入 10.8 萬筆確認時，真正留著的記憶體因此一路漲到 316MB）。修法：寬的表一次寫 200 筆（platform `prisma/create-many-chunk.ts`；降到 201MB）。
+**量法**：每寫一次就強制回收（`node --expose-gc`、`global.gc()`）再讀 `heapUsed`——一直漲、之後跑別的查詢才慢慢降，就是這個。
+📌 另外：程序大小（RSS）不會跟著降多少——V8 跟作業系統要了記憶體要閒下來才還，真的要壓住程序大小得設 `--max-old-space-size`（實驗 768MB：尖峰 +949MB → +422MB，時間幾乎不變）。
 
 ### 🔴 ExcelJS 串流讀 xlsx，中文會被讀成「�」——不報錯，只是字壞掉（2026-10-20）
 
@@ -50,10 +59,24 @@ native auth v2 必須有 `JWT_ACCESS_PRIVATE_KEY_BASE64`、`JWT_ACCESS_PUBLIC_KE
 姓名、地址、來源帳號、團名都有；**同一份檔裡一模一樣的字串壞成一樣**，換一份檔就壞在別處——看起來很像「來源系統匯出時隨機弄壞字」。
 **它不是檔案壞了**：同一格（`客戶分析報表_2.xlsx` F3013）三種讀法——SheetJS 整檔讀「呂聯恭」、ExcelJS 整檔讀（`workbook.xlsx.readFile`）「呂聯恭」、
 **ExcelJS 串流讀「呂聯���」**（exceljs 4.4.0）。改用 SheetJS 重量，五份科威檔 **0 格**「�」。
-原因**推測**是串流一段一段讀時，一個中文字的位元組剛好被切在兩段之間（未查 exceljs 原始碼證實）。
-**影響**：platform `apps/api/scripts/import-customers.ts`（`crm-party-base` 的陽春匯入 CLI）用的就是串流讀法——照它匯真資料，姓名會被存成亂碼且沒有任何錯誤。
-**怎麼驗**：拿**真實檔**（不是合成資料），用匯入程式的讀法讀出全部格子，跟 SheetJS 讀的逐格比對＝0 差異、全檔 0 個 U+FFFD。
-**修法**：由 W2 #6 `cowell-import-pipeline` 的 SD 決定（大檔仍不能一次讀進記憶體，不能單純改回整檔讀）。
+**根因（2026-10-21 查 exceljs 4.4.0 原始碼證實，`lib/utils/parse-sax.js`、`browser-buffer-decode.js`）**：串流讀法把檔案一段一段（約 16KB）
+交給解析器，每一段各自 `TextDecoder.decode(chunk)`——**沒帶 `{ stream: true }`，而且全程共用同一個解碼器**。
+一個中文字在檔案裡佔 3 個位元組，剛好被切在兩段之間時，前一段的尾巴與後一段的開頭各自翻不出字，就變成「�」，不報任何錯。
+整檔讀（`readFile`）沒事，是因為它把每個檔內項目整份解壓成一個字串才解析。exceljs 最新版仍是 4.4.0，沒有修。
+**還有第二個問題**：科威檔的工作表排在共用字串前面，exceljs 串流讀遇到這種排列會**先把整張工作表寫成作業系統暫存檔**（生日、金額是明文），讀完才刪、中途出錯就留到程式重啟。
+**影響**：platform 的陽春匯入 CLI（`apps/api/scripts/import-customers.ts`，已於 2026-10-27 退役刪除）用的就是串流讀法。
+**怎麼驗**：拿**真實檔**（不是合成資料），用匯入程式的讀法讀出全部格子，跟整份讀的逐格比對＝0 差異、全檔 0 個 U+FFFD。
+**修法（platform，`cowell-import-pipeline` 段 1，2026-10-21）**：**不用 exceljs 讀**，自己寫一個小讀檔器
+（`apps/api/src/integration/cowell/xlsx-reader.ts`，約 450 行；exceljs 只留給匯出寫檔）：
+①原檔（壓縮狀態，≤30MB）留在記憶體、用 `unzipper.Open.buffer` 照任意順序打開檔內項目——**不寫暫存檔**；
+②**每個檔內項目自己一個 `TextDecoder`、每段都帶 `{ stream: true }`**，再加 `fatal: true`（真的遇到不合法的位元組就整份失敗，不悄悄變「�」）；
+③字串表留在記憶體、工作表一列一列吐。五份真實檔（含 10.8 萬列的綜合檔）跟 exceljs 整份讀**逐格比對 0 差異、0 個「�」**，
+讀一遍原始檔 0.7～1.2 秒、峰值 120～310MB（整份讀同樣的檔要 685MB～1GB）。
+**守著它的兩道測試**：CI 每次跑——用 exceljs 寫一份 5 萬個中文字串的檔，自己的讀法讀回來 0 個「�」，**同一份檔用 exceljs 原版串流讀必須讀到「�」**
+（證明測試檔真的有字被切在段落邊界上；哪天 exceljs 修好了這條會紅，那時不是我們壞了）；
+開發機——`npm run test:cowell-real-files` 拿真實檔逐格比對（`COWELL_REAL_FILES_DIR` 指到放檔的資料夾，檔案不進 git）。
+**為什麼不直接修 exceljs**：要多一個每次安裝自動改套件的工具（`patch-package`），兩支 Dockerfile 都要先放好補丁檔（漏了會悄悄沒套上），暫存檔問題也還在。
+📌 **別的專案要串流讀 xlsx**：同一個坑。要嘛整份讀（檔小的時候），要嘛確認讀法對每個檔內項目用自己的解碼器並帶 `stream: true`，再用真實檔逐格比對。
 **怎麼踩到的**：AI 量測時看到「�」就斷言「科威匯出會弄壞字」、寫進規格還出了選擇題；Steven 打開 Excel 看那一列是好的，一句話戳破。**讀出來的資料看起來壞了，先換一種讀法確認，再說是資料壞**。
 
 ### Google 登入測試規則（native login 與 Google login 是兩條路徑）
