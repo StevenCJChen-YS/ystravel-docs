@@ -323,6 +323,22 @@ rebuild 比對就發現產物多出一條**沒有任何元素在用**的規則�
 ### Docker Desktop 反覆「unexpected error」起不來：`dockerInference` socket 殘留
 `%LOCALAPPDATA%\Docker\run\dockerInference` socket 檔殘留、無法移除 → Docker Desktop 開機反覆跳「unexpected error」。解法＝關掉所有 Docker 程序 → 刪掉殘留 socket 檔 → 重啟 Docker Desktop。Docker Desktop 起不來又找不到明顯原因時先查這個殘留檔。（2026-07-16）
 
+### 🔴 Docker Desktop（Windows）：compose 的 port 同時寫 `127.0.0.1` 與 `[::1]`＝容器起不來（2026-11-11）
+**症狀**：`docker compose up -d` 重建容器後**整個服務掛掉**（開發資料庫連不上、API 健康檢查 503），compose 印出：
+```
+Error response from daemon: ports are not available: exposing port TCP [::1]:5432 -> 127.0.0.1:0:
+listen tcp6 [::1]:5432: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+```
+但當下 `netstat` 查 5432 **沒有任何程式在聽**，看起來像有鬼。
+**原因**：Docker Desktop 在 Windows 上發佈 port 時，**自己會另外聽一個 IPv6 的 `::1`**（讓 `localhost` 也連得到）。
+compose 裡再明寫一行 `"[::1]:5432:5432"`＝同一個位址綁兩次，第二次失敗，整個容器就啟動失敗。
+（ystravel-platform 資安複查 H-3 想把開發資料庫從 `0.0.0.0` 收成只開給本機，「怕 `localhost` 解析成 IPv6 連不到」而多寫了 `[::1]` 那行，PR #339 → #340 修回來。）
+**解法**：**只寫 `"127.0.0.1:5432:5432"`**，不要再加 `[::1]`。實測 `DATABASE_URL=…@localhost` 照樣連得上，`netstat` 只剩 `127.0.0.1:5432` 在聽、區網連不到。
+**資料庫已經掛了要先救**：不必改 repo 裡的檔——把 compose 複製一份、拿掉 `[::1]` 那行，用**同一個專案名稱**拉起來
+（`docker compose -p <原專案名> -f <修好的副本> up -d`），容器名稱與 volume 都沿用原本的，資料不會掉。
+📌 **對外開放的反面也要記**：`ports: "5432:5432"`（不寫 IP）＝綁 `0.0.0.0`，而 Windows 防火牆對 Docker Desktop 通常是放行的
+⇒ **同區網的人都連得進來**。開發用的資料庫、Mailpit 一律寫 `127.0.0.1:`。
+
 ### jest-cucumber：某一步「5 秒逾時」而不是斷言失敗——步驟函式宣告的參數比正規式的組數多
 **症狀**：某條場景卡在某一步，結果是 `Exceeded timeout of 5000 ms for a test`，**沒有任何斷言失敗**，
 看起來像程式卡住或替身沒回應。
