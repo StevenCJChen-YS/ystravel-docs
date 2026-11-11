@@ -339,6 +339,40 @@ compose 裡再明寫一行 `"[::1]:5432:5432"`＝同一個位址綁兩次，第�
 📌 **對外開放的反面也要記**：`ports: "5432:5432"`（不寫 IP）＝綁 `0.0.0.0`，而 Windows 防火牆對 Docker Desktop 通常是放行的
 ⇒ **同區網的人都連得進來**。開發用的資料庫、Mailpit 一律寫 `127.0.0.1:`。
 
+### 🔴 升了 vite 之後前端起不來：`Cannot find native binding`……其實是 Windows「應用程式控制」擋掉新版 rolldown（2026-11-11）
+**症狀**：`npm run portal`、`vite build` 或 `npm run build` 一啟動就掛，錯誤**指著 npm 的 bug**：
+```
+Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828).
+Please try `npm i` again after removing both package-lock.json and node_modules directory.
+```
+照它說的砍 `node_modules`＋重裝**沒用**。要往下看 `cause` 鏈，真正的原因在最裡面：
+```
+cause: Error: An Application Control policy has blocked this file.
+```
+**原因**：公司電腦（Windows 11）的「應用程式控制」政策會擋**還沒建立信譽的原生執行檔**。vite 8 的打包核心 rolldown 是原生檔
+（`@rolldown/binding-win32-x64-msvc` 的 `.node`）——2026-11-11 實測 **1.2.19 被擋、1.1.5（當時 main 用的）不擋**；
+把專案放在 `Temp` 或 `C:\git` 底下都一樣被擋，**擋的是那個檔本身，不是放的位置**。
+（ystravel-platform 資安複查 M-5 套件更新時踩到：`npm audit fix` 會順手把 vite 8.1.4 → 8.3.8、rolldown 1.1.5 → 1.2.19。）
+**解法**：
+- **升級前先在開發機實測**：改完依賴後一定跑一次 `npm run portal`（或 `vite build`），起得來才算數——CI 是 Linux，**完全測不到這個**，會是綠的。
+- 被擋就**先不升 vite**：它只是開發與打包工具，正式站只拿打包好的靜態檔；vite 的漏洞公告多半只影響開發伺服器。等新版累積信譽、或請 IT 把 `node_modules` 的原生檔加白名單，再升。
+- 同一類原生檔還有 `sharp`、`lightningcss`、`@tailwindcss/oxide`、`esbuild`、`bcrypt`、Prisma 引擎——升它們之後也要在開發機跑一次對應功能。
+  （2026-11-11 sharp 0.35.5 的 win32 檔**沒被擋**，API 測試與縮圖都正常。）
+
+### 依賴升級（`npm audit` 修漏洞）的做法：從 main 的 lockfile 重來＋點名升級，不要在亂掉的樹上補（2026-11-11）
+**踩到的**：先跑全面的 `npm audit fix`，再手動把某些套件卡回舊一點的版本 ⇒ `@nestjs/core` 在依賴樹裡**裝成兩份**、
+`@nestjs/platform-express` 被擺到 `apps/api/node_modules` 底下（核心找不到它）⇒ 一堆測試套件「failed to run」。
+再補 `npm dedupe`、npm `overrides` 都救不回來：
+- **`overrides` 對工作區的直接依賴無效**（vite 是 portal 的直接依賴，寫了也不生效），而且 **`npm audit fix` 不理 `overrides`**；
+- 在已經有 lockfile 條目的情況下加 `overrides`，npm 也不會自己重算。
+**做法**：
+1. `git checkout origin/main -- package.json package-lock.json apps/*/package.json` 退回乾淨的起點，`npm ci`。
+2. **點名升級**：要跨大版本或要指定版本的，`npm install -w <workspace> --save-exact <pkg>@<ver>`（之後再把 package.json 改回 `^`，lockfile 會留住那一版）；
+   只要範圍內小版號的，`npm update <pkg> …`（傳遞依賴也可以點名）。**不要整包 `npm audit fix`**——它會順手升你不想動的（例如上面那條的 vite）。
+3. 檢查**同一套件沒有兩份**（`npm ls @nestjs/core`）、同家族版本對齊（Nest 六個、Prisma 三個要同版）。
+4. **再 `npm ci` 一次**（等同 CI 的乾淨安裝）才跑測試與 build——在調整過的 `node_modules` 上測，會碰到殘留狀態造成的假紅燈。
+📌 版本挑選比照業界：**新版本先放一陣子**（盡量選發佈兩週以上的；`npm view <pkg> time --json` 看日期），避開剛發佈就被入侵的供應鏈風險。
+
 ### jest-cucumber：某一步「5 秒逾時」而不是斷言失敗——步驟函式宣告的參數比正規式的組數多
 **症狀**：某條場景卡在某一步，結果是 `Exceeded timeout of 5000 ms for a test`，**沒有任何斷言失敗**，
 看起來像程式卡住或替身沒回應。
